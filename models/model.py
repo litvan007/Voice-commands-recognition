@@ -11,32 +11,32 @@ class Speech_recognition_model(nn.Module):
     """ Speech Recognition Model Inspired by DeepSpeech 2 and LAS """
 
     # def __init__(self, n_cnn_layers, n_rnn_layers, rnn_dim, n_class, n_feats, stride=2, dropout=0.1, bidirectional=True):
-    def __init__(self, CNN_params, ResCNN_params, RNN_params, Attention_params, Classifier_params, Others_params):
+    def __init__(self, CNN_params, ResCNN_params, Fully_connected_params, RNN_params, Attention_params, Classifier_params):
         super(Speech_recognition_model, self).__init__()
-        n_feats = Others_params['n_feats']
-        n_cnn_layers = Others_params['n_cnn_layers']
-        n_fully_connected_out = Others_params['n_fully_connected_out']
-        n_class = Classifier_params['n_class']
 
         # self.cnn = nn.Conv2d(1, 32, 3, stride=stride, padding=3//2)  # cnn for extracting heirachal features
         self.cnn = nn.Conv2d(**CNN_params) # cnn for extracting heirachal features
 
         # n residual cnn layers with filter size of 32
-        self.rescnn_layers = nn.Sequential(*[
-            ResidualCNN(**ResCNN_params) 
+        self.rescnn_layers = self.__rescnn_layers_create(**ResCNN_params)
+        self.fully_connected = nn.Linear(**Fully_connected_params)
+        self.encoder = Encoder(**RNN_params)
+        self.attention = Attention(**Attention_params)
+        self.classifier = self.__classifier_create(**Classifier_params)
+
+    def __classifier_create(self, in_features, out_features, dropout, n_class):
+        return nn.Sequential(
+            nn.Linear(in_features, out_features),  # birnn returns rnn_dim*2
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(out_features, n_class)
+        )
+    
+    def __rescnn_layers_create(self, in_channels, out_channels, kernel_size, stride, dropout, n_feats, padding, n_cnn_layers):
+        return nn.Sequential(*[
+            ResidualCNN(in_channels, out_channels, kernel_size, stride, dropout, n_feats, padding) 
             for _ in range(n_cnn_layers)
         ])
-        self.fully_connected = nn.Linear(n_feats*32, n_fully_connected_out)
-        self.encoder = Encoder(**RNN_params)
-
-        self.attention = Attention(**Attention_params)
-        
-        self.classifier = nn.Sequential(
-            nn.Linear(Classifier_params['in_channels_1'], Classifier_params['out_channels_1']),  # birnn returns rnn_dim*2
-            nn.GELU(),
-            nn.Dropout(Classifier_params['dropout']),
-            nn.Linear(Classifier_params['out_channels_1'], n_class)
-        )
 
     def forward(self, x):
         x = self.cnn(x)
