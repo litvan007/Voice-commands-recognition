@@ -23,7 +23,6 @@ class Attention(nn.Module):
     def forward(self, x, mask=None):
         feature_dim = self.feature_dim 
         step_dim = self.step_dim
-
         eij = torch.mm(
             x.contiguous().view(-1, feature_dim), 
             self.weight
