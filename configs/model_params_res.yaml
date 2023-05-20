@@ -20,7 +20,7 @@ Architecture:
   RNN_params:
     input_size: *FC_out_features
     hidden_size: &RNN_hidden_size !!int 512 
-    num_layers: 3
+    num_layers: 5
     bidirectional: True
     dropout: 0.1
     rnn_type: 'lstm'
@@ -37,7 +37,7 @@ Settings:
   Optimizer_Scheduler:
     lr_rate: 5e-4
     weight_decay: 0.0005
-    amsgrad: False
+    amsgrad: True
     max_lr: 0.06
     div_factor: 125
     max_norm: 1.4
