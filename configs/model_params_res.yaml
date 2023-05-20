@@ -15,7 +15,7 @@ Architecture:
     padding: 1
     n_cnn_layers: 3
   Fully_connected_params:
-    in_features: 2048 # n_feats * out_channels
+    in_features: 1024 # n_feats * out_channels
     out_features: &FC_out_features !!int 512
   RNN_params:
     input_size: *FC_out_features
