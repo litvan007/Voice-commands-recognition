@@ -37,7 +37,7 @@ Settings:
   Optimizer_Scheduler:
     lr_rate: 5e-4
     weight_decay: 0.0005
-    amsgrad: false
+    amsgrad: False
     max_lr: 0.06
     div_factor: 125
     max_norm: 1.4
