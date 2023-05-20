@@ -54,23 +54,17 @@ class Speech_recognition_model(nn.Module):
         output = self.classifier(att_output)
         return output
 
-    @classmethod
-    def load_model(cls, path):
-        package = torch.load(path, map_location=lambda storage, loc: storage)
-        model = cls.load_model_from_package(package)
-        return model
-
     @staticmethod
-    def serialize(model, optimizer, scheduler, epoch, tr_loss=None, cv_loss=None):
+    def serialize(model, optimizer, scheduler, epoch, tr_losses, cv_losses, tr_accuracy, cv_accuracy):
         package = {
-            # state
             'state_dict': model.state_dict(),
             'optim_dict': optimizer.state_dict(),
             'scheduler_dict': scheduler.state_dict(),
+            'tr_loss': tr_losses,
+            'cv_loss': cv_losses,
+            'tr_accuracy': tr_accuracy,
+            'tr_accuracy': cv_accuracy,
             'epoch': epoch
         }
-        if tr_loss is not None:
-            package['tr_loss'] = tr_loss
-            package['cv_loss'] = cv_loss
         return package
     
