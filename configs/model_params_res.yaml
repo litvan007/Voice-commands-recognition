@@ -10,7 +10,7 @@ Architecture:
     out_channels: *CNN_out_channels
     kernel_size: 3
     stride: 1
-    dropout: 0.1
+    dropout: 0.255
     n_feats: 32
     padding: 1
     n_cnn_layers: 3
@@ -20,7 +20,7 @@ Architecture:
   RNN_params:
     input_size: *FC_out_features
     hidden_size: &RNN_hidden_size !!int 512 
-    num_layers: 5
+    num_layers: 3
     bidirectional: True
     dropout: 0.1
     rnn_type: 'lstm'
@@ -30,17 +30,17 @@ Architecture:
   Classifier_params:
     in_features: *FC_out_features # = RNN_input_size
     out_features: 256
-    dropout: 0.1
+    dropout: 0.4
     n_class: 18 # num_commands
 
 Settings: 
   Optimizer_Scheduler:
     lr_rate: 5e-4
     weight_decay: 0.0005
-    amsgrad: True
-    max_lr: 0.05
-    div_factor: 250
-    max_norm: 1
+    amsgrad: false
+    max_lr: 0.06
+    div_factor: 125
+    max_norm: 1.4
   Other:
-    epochs: 10
+    epochs: 100
     batch_size: 128
