@@ -20,6 +20,20 @@ class Encoder(nn.Module):
                                batch_first=True,
                                dropout=dropout,
                                bidirectional=bidirectional)
+        self.rnn.apply(self._init_weights)
+
+    def _init_weights(self, m):
+        if isinstance(m, nn.LSTM):
+            for name, param in m.named_parameters():
+                if 'weight_ih' in name:
+                    nn.init.xavier_uniform_(param.data)
+                elif 'weight_hh' in name:
+                    nn.init.orthogonal_(param.data)
+                elif 'bias' in name:
+                    param.data.fill_(0)
+        else:
+            print('Not setting weights for type {}'.format(type(m)))
+
 
     def forward(self, padded_input):
         """

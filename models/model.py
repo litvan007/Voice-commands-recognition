@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+import torch.nn.functional as F
 import yaml
 
 from models.encoder import Encoder
@@ -19,24 +20,39 @@ class Speech_recognition_model(nn.Module):
 
         # n residual cnn layers with filter size of 32
         self.rescnn_layers = self.__rescnn_layers_create(**ResCNN_params)
+
         self.fully_connected = nn.Linear(**Fully_connected_params)
+        self.fully_connected.apply(self._init_weights)
+        
         self.encoder = Encoder(**RNN_params)
         self.attention = Attention(**Attention_params)
         self.classifier = self.__classifier_create(**Classifier_params)
 
+    def _init_weights(self, m):
+        if type(m) in (nn.Conv2d, nn.Linear):
+            nn.init.xavier_uniform_(m.weight)
+        else:
+            print('Not setting weights for type {}'.format(type(m)))
+
+
     def __classifier_create(self, in_features, out_features, dropout, n_class):
-        return nn.Sequential(
+        sub_model =  nn.Sequential(
             nn.Linear(in_features, out_features),  # birnn returns rnn_dim*2
             nn.GELU(),
             nn.Dropout(dropout),
             nn.Linear(out_features, n_class)
         )
-    
+        sub_model.apply(self._init_weights)
+        return sub_model
+
     def __rescnn_layers_create(self, in_channels, out_channels, kernel_size, stride, dropout, n_feats, padding, n_cnn_layers):
-        return nn.Sequential(*[
+        sub_model = nn.Sequential(*[
             ResidualCNN(in_channels, out_channels, kernel_size, stride, dropout, n_feats, padding) 
             for _ in range(n_cnn_layers)
         ])
+        for subsub_model in sub_model:
+            subsub_model.apply(self._init_weights)
+        return sub_model
 
     def forward(self, x):
         x = self.cnn(x)
