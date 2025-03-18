@@ -1,7 +1,8 @@
 import onnxruntime as ort
 import numpy as np
 
-import librosa
+import librosa    
+from scipy.fftpack import dct
 import librosa.display
 import matplotlib.pyplot as plt
 
@@ -92,16 +93,33 @@ if __name__ == '__main__':
     # ).T
 
 
-    mfcc = librosa.feature.mfcc(
-        y=signal,
-        sr=sample_rate,
-        n_mfcc=n_mfcc,
-        n_fft=n_fft,
-        hop_length=hop_length,
-        n_mels=n_mels,
-        dct_type=2,
-        norm='ortho'
+
+
+    # Example waveform (replace with your audio data)
+    sr = sample_rate
+
+    # STFT -> Mel Spectrogram
+    mel_spec = librosa.feature.melspectrogram(
+        y=signal, sr=sr,
+        n_fft=480, hop_length=160, win_length=480,
+        window='hann', center=True, pad_mode='reflect',
+        power=2.0,         # power spectrogram (mag^2)
+        n_mels=64, 
+        fmin=0.0, fmax=8000.0,
+        htk=True, norm=None  # mimic Torchaudio: HTK mel, no filter norm&#8203;:contentReference[oaicite:12]{index=12}
     )
+
+    # dB conversion (10 * log10), reference max, no clipping
+    # Avoid log10(0) by adding a tiny value (Librosa uses amin=1e-10 for power) 
+    amin = 1e-10
+    mel_spec = np.maximum(mel_spec, amin)
+    ref_value = mel_spec.max()
+    mel_spec_db = 10.0 * np.log10(mel_spec / ref_value)  # 0 dB at max&#8203;:contentReference[oaicite:13]{index=13}
+
+    # DCT-II along the mel axis to get MFCCs
+    mfcc = dct(mel_spec_db, type=2, axis=0, norm='ortho')[0:32, :]
+    # If mel_spec_db shape is (n_mels, n_frames), use axis=0 (each column = 1 frame)
+    # Now mfcc has shape (32, n_frames)
     
     print( f'Время обработки MFCC признаков: {time.time() - time_mfcc_start}' )
 
