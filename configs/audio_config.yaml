@@ -1,0 +1,20 @@
+# Общие настройки аудио
+common:
+  sample_rate: 16000
+
+# Настройки для извлечения признаков для распознавания команд
+command_features:
+  n_fft: 480
+  hop_length: 160
+  n_mels: 64
+  n_mfcc: 32
+  window: "hann"
+  normalize: true
+
+# Настройки для VAD
+vad_features:
+  frame_duration_ms: 30        # длина одного фрейма в миллисекундах
+  threshold: 0.5               # порог вероятности для VAD
+  smoothing_window: 5          # сглаживание выхода
+  min_speech_duration_ms: 300  # фильтр коротких звуков
+  min_silence_duration_ms: 200 # чтобы зафиксировать конец речи
