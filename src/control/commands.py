@@ -78,20 +78,35 @@ class PCA9685:
         pulse = pulse*4096/20000        #PWM frequency is 50HZ,the period is 20000us
         self.setPWM(channel, 0, int(pulse))
 
+class ArmController:
+    """
+    Контроллер роборуки через PCA9685.
 
-class interface:
-    def __init__(self, driver=None) -> None:
+    Оборачивает низкоуровневый драйвер и предоставляет абстракции
+    для базовых движений и команд.
+    """
+
+    def __init__(self, driver: PCA9685):
         self.driver = driver
-        pass    
+        self.driver.setPWMFreq(50)
 
-    def move(self): #TODO
-        pwm = self.driver(0x40, debug=False)
-        pwm.setPWMFreq(50)
-        for i in range(0,4000,200):  
-            pwm.setServoPulse(2,i)   
-            time.sleep(0.02)     
+    def set_joint(self, channel: int, pulse: int):
+        """
+        Управляет отдельным каналом серво.
+        """
+        self.driver.setServoPulse(channel, pulse)
 
-        # setServoPulse(2,2500)
-        # for i in range(4000,0,-200):
-        #     pwm.setServoPulse(2,i)   
-        #     time.sleep(0.02)
+    def demo_motion(self):
+        """
+        Демонстрационное движение на одном канале.
+        """
+        for i in range(0, 4000, 200):
+            self.set_joint(2, i)
+            time.sleep(0.02)
+
+    def execute_command(self, command: str):
+        """
+        Выполняет команду из словаря: 'поднять', 'влево', и т.д.
+        """
+        # TODO: команда → список движений
+        pass

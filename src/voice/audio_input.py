@@ -1,50 +1,61 @@
 import librosa
 import numpy as np
+import logging
 from scipy.fftpack import dct
+from settings import Settings
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)  # можно сделать DEBUG при отладке
 
 class FeaturesAudio:
-    def __init__(self, sample_rate) -> None:
-        self.sample_rate = sample_rate
-        pass
+    def sample(self, wave_path: str, settings: Settings):
+        sample_rate = settings.audio_config.common.sample_rate
+        logger.info(f"Загрузка аудио: {wave_path} с sample_rate={sample_rate}")
 
-    def sample(self, wave_path: str):
-        signal, sample_rate = librosa.load(wave_path, sr=self.sample_rate)
-    
-        if signal.dtype == np.int16: # can be deleted
+        signal, _ = librosa.load(wave_path, sr=sample_rate)
+
+        if signal.dtype == np.int16:
+            logger.debug("Конвертация int16 → float32")
             signal = signal.astype(np.float32) / 32768.0
 
         if signal.ndim > 1:
+            logger.debug("Аудио многоканальное, берём первый канал")
             signal = signal[:, 0]
 
+        logger.info(f"Аудио успешно загружено, длина = {len(signal)} сэмплов")
         return signal, sample_rate
 
-    def get_features(self, signal, sample_rate, config, feature_type: str): #TODO
+    def get_features(self, signal: np.ndarray, settings: Settings, feature_type: str):
         if feature_type == 'VCR':
+            cfg = settings.audio_config.command_features
+            sample_rate = settings.audio_config.common.sample_rate
 
-            # STFT -> Mel Spectrogram
-            mel_spec = librosa.feature.melspectrogram( #TODO
-                y=signal, sr=sample_rate,
-                n_fft=480, hop_length=160, win_length=480,
-                window='hann', center=True, pad_mode='reflect',
-                power=2.0,         # power spectrogram (mag^2)
-                n_mels=64, 
-                fmin=0.0, fmax=8000.0,
-                htk=True, norm=None  # mimic Torchaudio: HTK mel, no filter norm&#8203;:contentReference[oaicite:12]{index=12}
+            logger.info("Извлечение VCR-признаков (MFCC)")
+
+            mel_spec = librosa.feature.melspectrogram(
+                y=signal,
+                sr=sample_rate,
+                n_fft=cfg.n_fft,
+                hop_length=cfg.hop_length,
+                win_length=cfg.n_fft,
+                window=cfg.window or 'hann',
+                center=cfg.center,
+                pad_mode='reflect',
+                power=cfg.power,
+                n_mels=cfg.n_mels,
+                fmin=cfg.fmin,
+                fmax=cfg.fmax,
+                htk=cfg.htk,
+                norm=None
             )
 
-            # dB conversion (10 * log10), reference max, no clipping
-            # Avoid log10(0) by adding a tiny value (Librosa uses amin=1e-10 for power) 
-            amin = 1e-10
-            mel_spec = np.maximum(mel_spec, amin)
-            ref_value = mel_spec.max()
-            mel_spec_db = 10.0 * np.log10(mel_spec / ref_value)  # 0 dB at max&#8203;:contentReference[oaicite:13]{index=13}
+            mel_spec = np.maximum(mel_spec, 1e-10)
+            mel_spec_db = 10.0 * np.log10(mel_spec / mel_spec.max())
 
-            # DCT-II along the mel axis to get MFCCs
-            mfcc = dct(mel_spec_db, type=2, axis=0, norm='ortho')[0:32, :]
-
+            mfcc = dct(mel_spec_db, type=2, axis=0, norm='ortho')[:cfg.n_mfcc, :]
+            logger.info(f"MFCC успешно извлечены: shape = {mfcc.shape}")
             return mfcc
 
-
-        if feature_type == 'VAD':
+        elif feature_type == 'VAD':
+            logger.warning("VAD-фичи ещё не реализованы")
             pass

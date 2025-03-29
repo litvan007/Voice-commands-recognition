@@ -1,15 +1,23 @@
 # Общие настройки аудио
 common:
   sample_rate: 16000
+  debug: False
 
 # Настройки для извлечения признаков для распознавания команд
 command_features:
   n_fft: 480
   hop_length: 160
+  win_length: 480
   n_mels: 64
   n_mfcc: 32
   window: "hann"
-  normalize: true
+  normalize: True
+  center: True
+  power: 2.0
+  n_mels: 64
+  fmin: 0.0
+  fmax: 8000.0
+  htk: True
 
 # Настройки для VAD
 vad_features:
