@@ -9,9 +9,12 @@ VOICE_COMMAND_CONFIG_PATH = Path('/Users/litvan007/Voice-commands-recognition/co
 CONTROL_CONFIG_PATH = Path('...')  # TODO
 
 MODELS_CONFIG_PATH = Path('/Users/litvan007/Voice-commands-recognition/configs/models.yaml')
+ARM_COMMAND_CONFIG_PATH = Path('/Users/litvan007/Voice-commands-recognition/configs/arm_commands.yaml')
+
+class ArmCommandSet(BaseModel):
+    commands: Dict[str, Dict[int, int]]  # label -> {channel: pulse}
 
 # --- AUDIO CONFIG ---
-
 class CommonAudioConfig(BaseModel):
     sample_rate: int
     debug: bool
@@ -64,13 +67,15 @@ class ModelConfig(BaseModel):
 # --- SETTINGS CLASS ---
 
 class Settings(BaseModel):
+    arm_commands: ArmCommandSet
     audio_config: AudioConfig
     voice_command_config: VoiceCommandConfig
     model_paths: ModelPaths
-    debug: bool = False
 
     @classmethod
     def load(cls) -> "Settings":
+        with open(ARM_COMMAND_CONFIG_PATH, "r", encoding="utf-8") as f:
+            arm_data = yaml.safe_load(f)
         with open(AUDIO_CONFIG_PATH, "r", encoding="utf-8") as f:
             audio_data = yaml.safe_load(f)
         with open(VOICE_COMMAND_CONFIG_PATH, "r", encoding="utf-8") as f:
@@ -82,5 +87,6 @@ class Settings(BaseModel):
             audio_config=AudioConfig(**audio_data),
             voice_command_config=VoiceCommandConfig(**vc_data),
             model_paths=ModelPaths(**model_data["models"]),
+            arm_commands=ArmCommandSet(**arm_data),
         )
 
