@@ -4,12 +4,12 @@ import yaml
 from pathlib import Path
 
 # Пути к конфигам
-AUDIO_CONFIG_PATH = Path('/Users/litvan007/Voice-commands-recognition/configs/audio_config.yaml')
-VOICE_COMMAND_CONFIG_PATH = Path('/Users/litvan007/Voice-commands-recognition/configs/voice_commands.yaml')
+AUDIO_CONFIG_PATH = Path('/home/i.litvinov/Voice-commands-recognition/configs/audio_config.yaml')
+VOICE_COMMAND_CONFIG_PATH = Path('/home/i.litvinov/Voice-commands-recognition/configs/voice_commands.yaml')
 CONTROL_CONFIG_PATH = Path('...')  # TODO
 
-MODELS_CONFIG_PATH = Path('/Users/litvan007/Voice-commands-recognition/configs/models.yaml')
-ARM_COMMAND_CONFIG_PATH = Path('/Users/litvan007/Voice-commands-recognition/configs/arm_commands.yaml')
+MODELS_CONFIG_PATH = Path('/home/i.litvinov/Voice-commands-recognition/configs/models.yaml')
+ARM_COMMAND_CONFIG_PATH = Path('/home/i.litvinov/Voice-commands-recognition/configs/arm_commands.yaml')
 
 class ArmCommandSet(BaseModel):
     commands: Dict[str, Dict[int, int]]  # label -> {channel: pulse}
@@ -71,6 +71,7 @@ class Settings(BaseModel):
     audio_config: AudioConfig
     voice_command_config: VoiceCommandConfig
     model_paths: ModelPaths
+    debug: bool
 
     @classmethod
     def load(cls) -> "Settings":
@@ -88,5 +89,6 @@ class Settings(BaseModel):
             voice_command_config=VoiceCommandConfig(**vc_data),
             model_paths=ModelPaths(**model_data["models"]),
             arm_commands=ArmCommandSet(**arm_data),
+            debug=AudioConfig(**audio_data).common.debug
         )
 

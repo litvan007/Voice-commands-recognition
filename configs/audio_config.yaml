@@ -1,7 +1,7 @@
 # Общие настройки аудио
 common:
   sample_rate: 16000
-  debug: False
+  debug: True
 
 # Настройки для извлечения признаков для распознавания команд
 command_features:

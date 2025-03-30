@@ -1,6 +1,8 @@
 import onnxruntime as ort
 import numpy as np
 
+import pyaudio
+
 import librosa    
 from scipy.fftpack import dct
 import librosa.display
@@ -40,7 +42,7 @@ labels_map = {  0: 'Опустить',
 if __name__ == '__main__':
 
     # инициализация модели
-    session = ort.InferenceSession('./model.onnx')
+    session = ort.InferenceSession('./models/model.onnx')
     input_name = session.get_inputs()[0].name
 
     " Выводим, что модель инициализируется "

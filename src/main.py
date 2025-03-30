@@ -1,8 +1,12 @@
 import logging
+import librosa
 from settings import Settings
 from voice.audio_input import AudioRecorder, FeaturesAudio
 from voice.recognizer import SpeechCommandModel
 from control.controller import PCA9685, ArmController
+import scipy.io.wavfile as wav
+import time
+import numpy as np
 
 def setup_logging(debug: bool):
     logging.basicConfig(
@@ -23,7 +27,7 @@ def main():
     driver = PCA9685()
     arm = ArmController(driver)
 
-    # 3. Запись с микрофона
+    # # 3. Запись с микрофона
     recorder = AudioRecorder(
         device_index=2,
         sample_rate=settings.audio_config.common.sample_rate
@@ -43,3 +47,8 @@ def main():
         arm.execute_command(label, settings)
     else:
         logger.warning(f"Команда отвергнута: низкая уверенность (p={confidence:.2f})")
+
+if __name__ == '__main__':
+    
+    main()
+    

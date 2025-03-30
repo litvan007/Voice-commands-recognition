@@ -9,6 +9,8 @@ import wave
 import threading
 import logging
 
+import time
+
 from settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -122,6 +124,7 @@ class FeaturesAudio:
                 htk=cfg.htk,
                 norm=None
             )
+
 
             mel_spec = np.maximum(mel_spec, 1e-10)
             mel_spec_db = 10.0 * np.log10(mel_spec / mel_spec.max())

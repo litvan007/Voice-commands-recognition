@@ -1,4 +1,4 @@
 models:
-  # vad: "models/vad.onnx"
-  command_recognizer: "/Users/litvan007/Voice-commands-recognition/models/model.onnx"
-  # command_recognizer_large: "models/command_recognizer_large.onnx"
+  vad: "models/vad.onnx"
+  command_recognizer: "/home/i.litvinov/Voice-commands-recognition/models/model.onnx"
+  command_recognizer_large: "models/command_recognizer_large.onnx"
