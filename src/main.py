@@ -8,6 +8,8 @@ import scipy.io.wavfile as wav
 import time
 import numpy as np
 
+import smbus
+
 def setup_logging(debug: bool):
     logging.basicConfig(
         level=logging.DEBUG if debug else logging.INFO,
@@ -24,29 +26,32 @@ def main():
     # 2. Инициализация компонентов
     audio = FeaturesAudio()
     model = SpeechCommandModel(settings)
-    driver = PCA9685()
-    arm = ArmController(driver)
+
+    i2cBus = smbus.SMBus(1)
+    pca9685 = PCA9685(i2cBus)
+    arm = ArmController(pca9685)
 
     # # 3. Запись с микрофона
-    recorder = AudioRecorder(
-        device_index=2,
-        sample_rate=settings.audio_config.common.sample_rate
-    )
-    recorder.list_devices()
-    recorder.start_recording()
-    signal = recorder.get_resampled_audio()
+    while True:
+        recorder = AudioRecorder(
+            device_index=2,
+            sample_rate=settings.audio_config.common.sample_rate
+        )
+        recorder.list_devices()
+        recorder.start_recording()
+        signal = recorder.get_resampled_audio()
 
-    # 4. Извлечение признаков
-    mfcc = audio.get_features(signal, settings, feature_type="VCR")
+        # 4. Извлечение признаков
+        mfcc = audio.get_features(signal, settings, feature_type="VCR")
 
-    # 5. Предсказание команды
-    label, confidence = model.predict(mfcc)
+        # 5. Предсказание команды
+        label, confidence = model.predict(mfcc)
 
-    if label:
-        logger.info(f"Выполнение команды: {label} (p={confidence:.2f})")
-        arm.execute_command(label, settings)
-    else:
-        logger.warning(f"Команда отвергнута: низкая уверенность (p={confidence:.2f})")
+        if label:
+            logger.info(f"Выполнение команды: {label} (p={confidence:.2f})")
+            arm.execute_command(label, settings)
+        else:
+            logger.warning(f"Команда отвергнута: низкая уверенность (p={confidence:.2f})")
 
 if __name__ == '__main__':
     

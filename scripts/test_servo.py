@@ -1,14 +1,11 @@
-import smbus
+import logging
 import time
 import math
-import logging
-from settings import Settings
 
-logger = logging.getLogger(__name__)
+# Based on Adafruit Lib:
+# https://github.com/adafruit/Adafruit_Python_PCA9685/blob/master/Adafruit_PCA9685/PCA9685.py
 
-# ============================================================================
-# Raspi PCA9685 16-Channel PWM Servo Driver
-# ============================================================================
+# Default address:
 PCA9685_ADDRESS = 0x40
 
 # Registers/etc:
@@ -123,7 +120,7 @@ servo_min = 130 # Min pulse length out of 4096 / 150/112
 servo_max = 510 # Max pulse length out of 4096 / 600/492
 
 def map(x, in_min, in_max, out_min, out_max):
-    return int((x - in_min) * (out_max - out_min + 1) / (in_max - in_min + 1) + out_min)
+    return (x - in_min) * (out_max - out_min + 1) / (in_max - in_min + 1) + out_min
 
 class ServoPCA9685(object):
     def __init__(self, pca9685, channel):
@@ -148,69 +145,33 @@ class ServoPCA9685(object):
         self.pca9685.set_pwm(self.channel, 0, 0)
         time.sleep(0.005)
 
+import smbus
 
-class ArmController:
-    """
-    Контроллер роборуки через PCA9685.
-    """
+if __name__ == '__main__':
+    i2cBus = smbus.SMBus(1)
+    pca9685 = PCA9685(i2cBus)
+    servo00 = ServoPCA9685(pca9685, CHANNEL00)
+    servo01 = ServoPCA9685(pca9685, CHANNEL01)
+    servo02 = ServoPCA9685(pca9685, CHANNEL02)
+    servo03 = ServoPCA9685(pca9685, CHANNEL03)
 
-    def __init__(self, driver: PCA9685):
-        self.driver = driver
-        self.servo00 = ServoPCA9685(driver, CHANNEL00)
-        self.servo01 = ServoPCA9685(driver, CHANNEL01)
-        self.servo02 = ServoPCA9685(driver, CHANNEL02)
-        self.servo03 = ServoPCA9685(driver, CHANNEL03)
-        self.servo_map = {0: {'servo': self.servo00, 'prev_angle': 0}, 
-                          1: {'servo': self.servo01, 'prev_angle': 0}, 
-                          2: {'servo': self.servo02, 'prev_angle': 0}, 
-                          3: {'servo': self.servo03, 'prev_angle': 0}}
+    # 130 -> 510
+    for pulse in range(servo_min, servo_max + 1):
+        servo00.set_pulse(pulse)
+        servo01.set_pulse(pulse)
+        servo02.set_pulse(pulse)
+        servo03.set_pulse(pulse)
+        time.sleep(0.01)
 
-        self.servo00.disable()
-        self.servo01.disable()
-        self.servo02.disable()
-        self.servo03.disable()
-        logger.info("Контроллер руки инициализирован (PWM 50 Гц)")
+    # 510 -> 130
+    for pulse in reversed(range(servo_min, servo_max + 1)):
+        servo00.set_pulse(pulse)
+        servo01.set_pulse(pulse)
+        servo02.set_pulse(pulse)
+        servo03.set_pulse(pulse)
+        time.sleep(0.01)
 
-    def set_joint(self, channel: int, pulse: int):
-        """
-        Управляет одним каналом сервопривода.
-        """
-        logger.debug(f"Движение: канал {channel} → импульс {pulse}")
-        self.driver.setServoPulse(channel, pulse)
-
-    def demo_motion(self):
-        """
-        Демонстрационное движение на одном канале.
-        """
-        logger.info("Запуск demo-motion")
-        for i in range(0, 4000, 200):
-            self.set_joint(2, i)
-            time.sleep(0.02)
-
-    def execute_command(self, command: str, settings: Settings):
-        motion = settings.arm_commands.commands.get(command)
-        if motion is None:
-            logger.warning(f"Команда '{command}' не найдена в карте движений")
-            return
-
-        logger.info(f"Выполнение команды: {command}")
-        for channel, final_angle in motion.items():
-            if final_angle < self.servo_map[channel]['prev_angle']:
-                print( 'here' )
-                for cur_angle in range(self.servo_map[channel]['prev_angle'], final_angle - 1, - 1):
-                    self.servo_map[channel]['servo'].set_angle(cur_angle)
-                    time.sleep(0.01)
-
-            else:
-                for cur_angle in range(self.servo_map[channel]['prev_angle'], final_angle + 1):
-                    self.servo_map[channel]['servo'].set_angle(cur_angle)
-                    time.sleep(0.01)
-
-            self.servo_map[channel]['prev_angle'] = final_angle
-
-        logger.info( self.servo_map )
-
-        self.servo00.disable()
-        self.servo01.disable()
-        self.servo02.disable()
-        self.servo03.disable()
+    servo00.disable()
+    servo01.disable()
+    servo02.disable()
+    servo03.disable()
