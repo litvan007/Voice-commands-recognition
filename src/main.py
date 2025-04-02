@@ -1,13 +1,8 @@
 import logging
-import librosa
 from settings import Settings
 from voice.audio_input import AudioRecorder, FeaturesAudio
 from voice.recognizer import SpeechCommandModel
 from control.controller import PCA9685, ArmController
-import scipy.io.wavfile as wav
-import time
-import numpy as np
-
 import smbus
 
 def setup_logging(debug: bool):
@@ -17,13 +12,11 @@ def setup_logging(debug: bool):
     )
 
 def main():
-    # 1. Загрузка конфигурации
     settings = Settings.load()
     setup_logging(settings.debug)
     logger = logging.getLogger(__name__)
     logger.info("Запуск системы голосового управления")
 
-    # 2. Инициализация компонентов
     audio = FeaturesAudio()
     model = SpeechCommandModel(settings)
 
@@ -31,29 +24,44 @@ def main():
     pca9685 = PCA9685(i2cBus)
     arm = ArmController(pca9685)
 
-    # # 3. Запись с микрофона
+    is_active = False  # Изначально система неактивна
+
+    recorder = AudioRecorder(
+        device_index=2,
+        sample_rate=settings.audio_config.common.sample_rate
+    )
+    recorder.list_devices()
+
     while True:
-        recorder = AudioRecorder(
-            device_index=2,
-            sample_rate=settings.audio_config.common.sample_rate
-        )
-        recorder.list_devices()
+        logger.info("Ожидание голосовой команды...")
+        recorder.frames.clear()
+        recorder.stop_recording = False
         recorder.start_recording()
         signal = recorder.get_resampled_audio()
 
-        # 4. Извлечение признаков
         mfcc = audio.get_features(signal, settings, feature_type="VCR")
-
-        # 5. Предсказание команды
         label, confidence = model.predict(mfcc)
 
-        if label:
-            logger.info(f"Выполнение команды: {label} (p={confidence:.2f})")
+        if label is None:
+            logger.warning(f"Команда отвергнута: низкая уверенность (p={confidence:.2f})")
+            continue
+
+        logger.info(f"Распознана команда: {label} (p={confidence:.2f})")
+
+        if label.lower() == "старт":
+            is_active = True
+            logger.info("✅ Система активирована. Можно отдавать команды.")
+            arm.execute_command(label, settings)  # опционально дать руке позицию "Старт"
+
+        elif label.lower() == "стоп":
+            is_active = False
+            logger.info("⛔️ Система остановлена. Команды не принимаются.")
+            arm.execute_command(label, settings)  # опционально нейтральное положение
+
+        elif is_active:
             arm.execute_command(label, settings)
         else:
-            logger.warning(f"Команда отвергнута: низкая уверенность (p={confidence:.2f})")
+            logger.info("⚠️ Система неактивна. Произнесите команду «Старт» для начала работы.")
 
 if __name__ == '__main__':
-    
     main()
-    

@@ -1,63 +1,57 @@
 import logging
 import time
-import numpy as np
 from settings import Settings
-from voice.audio_input import FeaturesAudio
+from voice.audio_input import FeaturesAudio, AudioRecorder
 from voice.recognizer import SpeechCommandModel
-from voice.recorder import AudioRecorder
 from control.controller import PCA9685, ArmController
-
-def setup_logging(debug: bool):
-    logging.basicConfig(
-        level=logging.DEBUG if debug else logging.INFO,
-        format='[%(asctime)s] %(levelname)s: %(message)s',
-    )
 
 def main():
     settings = Settings.load()
-    setup_logging(settings.debug)
-    logger = logging.getLogger(__name__)
-    logger.info("🔁 Голосовой режим (потоковая работа) запущен")
-
-    # Компоненты
-    audio = FeaturesAudio()
-    model = SpeechCommandModel(settings)
-    driver = PCA9685()
-    arm = ArmController(driver)
-
-    # Микрофон
-    recorder = AudioRecorder(
-        device_index=2,
-        sample_rate=settings.audio_config.common.sample_rate
+    logging.basicConfig(
+        level=logging.INFO,
+        format='[%(asctime)s] %(levelname)s: %(message)s'
     )
-    recorder.list_devices()
+    logger = logging.getLogger(__name__)
+    logger.info("Запуск потоковой голосовой системы")
 
-    logger.info("🎤 Начинаем потоковую запись...")
+    audio_processor = FeaturesAudio()
+    recorder = AudioRecorder(device_index=2, sample_rate=16000)
+    model = SpeechCommandModel(settings)
+    arm = ArmController(PCA9685(smbus.SMBus(1)))
 
-    try:
-        while True:
-            # 1. Записать короткий фрагмент (например, 2 секунды)
-            recorder.start_recording()
-            time.sleep(2)
-            recorder.stop_recording = True
-            signal = recorder.get_resampled_audio()
+    listening_mode = False  # Изначально система не активна
 
-            if len(signal) < settings.audio_config.common.sample_rate // 2:
-                logger.debug("🔇 Слишком короткий сигнал, пропускаем")
-                continue
+    while True:
+        logger.info("Ожидание голосовой команды...")
+        recorder.start_recording()
+        signal = recorder.get_resampled_audio()
+        mfcc = audio_processor.get_features(signal, settings, "VCR")
+        label, confidence = model.predict(mfcc)
 
-            # 2. Извлечь признаки и предсказать
-            mfcc = audio.get_features(signal, settings, feature_type="VCR")
-            label, confidence = model.predict(mfcc)
+        if not label or confidence < 0.6:
+            logger.info("Команда не распознана или низкая уверенность.")
+            continue
 
-            if label:
-                logger.info(f"✅ Распознано: {label} (p={confidence:.2f})")
-                arm.execute_command(label, settings)
-            else:
-                logger.debug("❌ Команда не распознана")
+        logger.info(f"Распознано: {label} (уверенность {confidence:.2f})")
 
-    except KeyboardInterrupt:
-        logger.info("⏹ Работа остановлена пользователем")
+        if label == "Старт":
+            listening_mode = True
+            logger.info("🟢 Распознавание команд активировано.")
+            arm.execute_command(label, settings)  # Можно и двигаться в позицию «Старт»
+
+        elif label == "Стоп":
+            listening_mode = False
+            logger.info("🔴 Распознавание команд остановлено.")
+            arm.execute_command(label, settings)  # Вернуться в нейтральную позицию
+
+        elif listening_mode:
+            logger.info(f"Выполняем команду: {label}")
+            arm.execute_command(label, settings)
+
+        else:
+            logger.info(f"Система в режиме ожидания. Команда '{label}' проигнорирована.")
+
+        time.sleep(0.5)
 
 if __name__ == "__main__":
     main()

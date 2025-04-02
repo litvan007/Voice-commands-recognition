@@ -15,6 +15,7 @@ from settings import Settings
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # можно сделать DEBUG при отладке
+logging.getLogger("pyaudio").setLevel(logging.WARNING)
 
 class AudioRecorder:
     def __init__(self, device_index: int = 0, sample_rate: int = 16000, channels: int = 1, chunk: int = 1024):
