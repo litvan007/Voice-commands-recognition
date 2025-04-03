@@ -5,6 +5,7 @@ from voice.audio_input import AudioRecorder, FeaturesAudio, prepare_audio_device
 from voice.recognizer import SpeechCommandModel
 from control.controller import PCA9685, ArmController
 
+from utils import estimate_snr
 
 def setup_logging(debug: bool):
     logging.basicConfig(
@@ -48,6 +49,8 @@ def main():
 
         if settings.debug:
             recorder.save_to_wav()
+            snr = estimate_snr(signal)
+            logger.debug(f"SNR: {snr:.2f} dB")
 
         mfcc = audio_extractor.get_features(signal, settings, feature_type="VCR")
         label, confidence = model.predict(mfcc)
