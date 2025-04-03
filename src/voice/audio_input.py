@@ -17,9 +17,26 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # можно сделать DEBUG при отладке
 logging.getLogger("pyaudio").setLevel(logging.WARNING)
 
+
+def prepare_audio_device(device_index: int):
+    """
+    Один раз инициализирует PyAudio и возвращает выбранное устройство.
+    """
+    audio = pyaudio.PyAudio()
+    device_info = audio.get_device_info_by_index(device_index)
+
+    print("🎤 Используется аудиоустройство:")
+    print(f"[{device_index}] {device_info['name']} @ {device_info['defaultSampleRate']} Hz")
+
+    return audio, device_index, device_info
+
+
 class AudioRecorder:
-    def __init__(self, device_index: int = 0, sample_rate: int = 16000, channels: int = 1, chunk: int = 1024):
+    def __init__(self, audio, device_index, device_info, sample_rate=16000, channels=1, chunk=1024):
+        self.audio = audio
         self.device_index = device_index
+        self.device_info = device_info
+        self.original_rate = int(device_info['defaultSampleRate'])
         self.target_rate = sample_rate
         self.channels = channels
         self.chunk = chunk
@@ -27,18 +44,8 @@ class AudioRecorder:
         self.frames = []
         self.stop_recording = False
 
-        self.audio = pyaudio.PyAudio()
-        self.device_info = self.audio.get_device_info_by_index(self.device_index)
-        self.original_rate = int(self.device_info['defaultSampleRate'])
-
-    def list_devices(self):
-        print("Доступные аудиоустройства:")
-        for i in range(self.audio.get_device_count()):
-            info = self.audio.get_device_info_by_index(i)
-            print(f"[{i}] {info['name']} (входы: {info['maxInputChannels']}), {info['defaultSampleRate']} Гц")
-
     def start_recording(self):
-        logger.info(f"Запись с устройства {self.device_index}: {self.device_info['name']} @ {self.original_rate} Гц")
+        logger.info(f"🎙 Запись с устройства [{self.device_index}]: {self.device_info['name']} @ {self.original_rate} Гц")
         stream = self.audio.open(format=self.format,
                                  channels=self.channels,
                                  rate=self.original_rate,
@@ -58,8 +65,7 @@ class AudioRecorder:
 
         stream.stop_stream()
         stream.close()
-        self.audio.terminate()
-        logger.info("Запись завершена")
+        logger.info("📥 Запись завершена")
 
     def get_resampled_audio(self) -> np.ndarray:
         audio_data = b''.join(self.frames)
@@ -70,19 +76,7 @@ class AudioRecorder:
             resampled = resample_poly(audio_np, self.target_rate, self.original_rate)
             audio_np = np.clip(resampled, -32768, 32767).astype(np.int16)
 
-        # Приводим к float32, как делает librosa
         return audio_np.astype(np.float32) / 32768.0
-
-
-    def save_to_wav(self, path: str):
-        audio_int16 = self.get_resampled_audio()
-        with wave.open(path, 'wb') as wf:
-            wf.setnchannels(self.channels)
-            wf.setsampwidth(pyaudio.PyAudio().get_sample_size(self.format))
-            wf.setframerate(self.target_rate)
-            wf.writeframes(audio_int16.tobytes())
-        logger.info(f"Сохранено в WAV: {path}")
-
 
 class FeaturesAudio:
     def sample(self, wave_path: str, settings: Settings): # OLD
