@@ -46,6 +46,9 @@ def main():
         recorder.start_recording()
         signal = recorder.get_resampled_audio()
 
+        if settings.debug:
+            recorder.save_to_wav()
+
         mfcc = audio_extractor.get_features(signal, settings, feature_type="VCR")
         label, confidence = model.predict(mfcc)
 

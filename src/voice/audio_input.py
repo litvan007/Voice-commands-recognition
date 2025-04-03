@@ -4,6 +4,8 @@ import logging
 from scipy.fftpack import dct
 from scipy.signal import resample_poly
 
+import os
+import datetime
 import pyaudio
 import wave
 import threading
@@ -77,6 +79,27 @@ class AudioRecorder:
             audio_np = np.clip(resampled, -32768, 32767).astype(np.int16)
 
         return audio_np.astype(np.float32) / 32768.0
+    
+    def save_to_wav(self, directory: str = "debug_wavs"):
+        """
+        Сохраняет текущую запись в WAV-файл с уникальным именем.
+        """
+        os.makedirs(directory, exist_ok=True)
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"recognized_{timestamp}.wav"
+        path = os.path.join(directory, filename)
+
+        audio_int16 = (np.clip(
+            np.array(self.get_resampled_audio()) * 32768, -32768, 32767
+        )).astype(np.int16)
+
+        with wave.open(path, "wb") as wf:
+            wf.setnchannels(self.channels)
+            wf.setsampwidth(self.audio.get_sample_size(self.format))
+            wf.setframerate(self.target_rate)
+            wf.writeframes(audio_int16.tobytes())
+
+        logger.debug(f"🎙️ Аудио сохранено: {path}")
 
 class FeaturesAudio:
     def sample(self, wave_path: str, settings: Settings): # OLD
