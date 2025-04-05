@@ -11,6 +11,8 @@ import wave
 import threading
 import logging
 
+import opensmile
+
 import time
 
 from settings import Settings
@@ -102,6 +104,12 @@ class AudioRecorder:
         logger.debug(f"🎙️ Аудио сохранено: {path}")
 
 class FeaturesAudio:
+    def __init__(self):
+        self.smile = opensmile.Smile(
+            feature_set=opensmile.FeatureSet.emobase,
+            feature_level=opensmile.FeatureLevel.LowLevelDescriptors,
+        )
+
     def sample(self, wave_path: str, settings: Settings): # OLD
         sample_rate = settings.audio_config.common.sample_rate
         logger.info(f"Загрузка аудио: {wave_path} с sample_rate={sample_rate}")
@@ -152,5 +160,9 @@ class FeaturesAudio:
             return mfcc
 
         elif feature_type == 'VAD':
-            logger.warning("VAD-фичи ещё не реализованы")
-            pass
+            logger.info("Извлечение VAD-фичей через openSMILE")
+            sample_rate = settings.audio_config.common.sample_rate
+            features_df = self.smile.process_signal(signal, 8000)
+            features_np = features_df.to_numpy().astype(np.float32)
+            logger.info(f"VAD-фичи извлечены: shape = {features_np.shape}")
+            return features_np

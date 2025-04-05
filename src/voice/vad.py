@@ -1,52 +1,61 @@
 import numpy as np
 import logging
+import onnxruntime
 
 logger = logging.getLogger(__name__)
 
+
 class EmobaseCNN:
     """
-    Заготовка для VAD-модуля на базе openSMILE + CNN.
-    Пока что неактивна, но структура готова под внедрение.
+    VAD-модель на ONNX. Принимает готовые признаки [frames, features].
     """
 
-    def __init__(self, model_path: str = None):
-        # Здесь будет загрузка ONNX или Torch-модели
-        self.model_path = model_path
-        self.model = None  # TODO: модель не загружается пока
+    def __init__(self, model_path: str, threshold: float = 0.5):
+        self.threshold = threshold
+        self.session = None
 
-        logger.info("VAD инициализирован (заглушка)")
+        if model_path:
+            try:
+                self.session = onnxruntime.InferenceSession(model_path)
+                logger.info(f"✅ VAD-модель загружена: {model_path}")
+            except Exception as e:
+                logger.error(f"❌ Ошибка загрузки VAD-модели: {e}")
+        else:
+            logger.warning("⚠️ Путь к VAD-модели не указан")
 
-    def extract_features(self, signal: np.ndarray, sample_rate: int) -> np.ndarray:
+    def predict(self, features: np.ndarray) -> np.ndarray:
         """
-        Обёртка под openSMILE (emobase + LLD).
-        Возвращает фичи [time, features]
+        Принимает признаки формы (frames, features), возвращает бинарную маску.
         """
-        raise NotImplementedError("OpenSMILE фичи пока не подключены")
+        input_tensor = features[np.newaxis, ...]  # (1, frames, features)
 
-    def predict(self, signal: np.ndarray, sample_rate: int) -> np.ndarray:
-        """
-        Основной метод VAD: принимает аудиосигнал,
-        возвращает маску речи [0/1] по фреймам.
-        """
-        logger.warning("VAD не активен. Возвращаем пустую маску.")
-        return np.zeros(len(signal) // 160)  # грубая оценка: 10ms фреймы
+        if self.session:
+            try:
+                input_name = self.session.get_inputs()[0].name
+                output = self.session.run(None, {input_name: input_tensor})[0]
+                probs = np.squeeze(output)
+                return (probs >= self.threshold).astype(np.uint8)
+            except Exception as e:
+                logger.error(f"Ошибка инференса VAD: {e}")
+        return np.zeros(features.shape[0], dtype=np.uint8)
 
-    def segment(self, signal: np.ndarray, sample_rate: int) -> list:
+    def segment(self, mask: np.ndarray, signal_len: int, sample_rate: int) -> list[tuple[int, int]]:
         """
-        Делит аудио на сегменты, где есть голос.
-        Возвращает список (start, end) в сэмплах.
+        Делит маску [0/1] на сегменты (start, end) в сэмплах.
         """
-        vad_mask = self.predict(signal, sample_rate)
-        # TODO: в будущем — нормальный порог и сглаживание
+        frame_shift = int(0.01 * sample_rate)  # 10 мс шаг
         segments = []
-        in_speech = False
+        in_segment = False
         start = 0
-        for i, active in enumerate(vad_mask):
-            if active and not in_speech:
-                in_speech = True
-                start = i * 160
-            elif not active and in_speech:
-                in_speech = False
-                end = i * 160
+
+        for i, flag in enumerate(mask):
+            if flag and not in_segment:
+                in_segment = True
+                start = i * frame_shift
+            elif not flag and in_segment:
+                in_segment = False
+                end = i * frame_shift
                 segments.append((start, end))
+        if in_segment:
+            segments.append((start, signal_len))
         return segments
