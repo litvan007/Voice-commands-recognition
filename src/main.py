@@ -48,7 +48,7 @@ def main():
         signal = recorder.get_resampled_audio()
 
         if settings.debug:
-            recorder.save_to_wav()
+            recorderddada.save_to_wav()
             snr = estimate_snr(signal)
             logger.debug(f"SNR: {snr:.2f} dB")
 
