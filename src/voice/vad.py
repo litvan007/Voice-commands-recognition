@@ -1,6 +1,7 @@
 import numpy as np
 import logging
 import onnxruntime
+from settings import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -10,14 +11,15 @@ class EmobaseCNN:
     VAD-модель на ONNX. Принимает готовые признаки [frames, features].
     """
 
-    def __init__(self, model_path: str, threshold: float = 0.5):
-        self.threshold = threshold
+    def __init__(self, settings: Settings):
+        self.threshold = 0 # TODO
+        self.model_paths = settings.model_paths.vad
         self.session = None
 
-        if model_path:
+        if self.model_paths:
             try:
-                self.session = onnxruntime.InferenceSession(model_path)
-                logger.info(f"✅ VAD-модель загружена: {model_path}")
+                self.session = onnxruntime.InferenceSession(self.model_paths)
+                logger.info(f"✅ VAD-модель загружена: {self.model_paths}")
             except Exception as e:
                 logger.error(f"❌ Ошибка загрузки VAD-модели: {e}")
         else:

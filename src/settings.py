@@ -2,14 +2,13 @@ from pydantic import BaseModel, Field
 from typing import Dict, Optional
 import yaml
 from pathlib import Path
-
 # Пути к конфигам
-AUDIO_CONFIG_PATH = Path('/home/i.litvinov/Voice-commands-recognition/configs/audio_config.yaml')
-VOICE_COMMAND_CONFIG_PATH = Path('/home/i.litvinov/Voice-commands-recognition/configs/voice_commands.yaml')
+AUDIO_CONFIG_PATH = Path('/Users/litvan007/Voice-commands-recognition/configs/audio_config.yaml')
+VOICE_COMMAND_CONFIG_PATH = Path('/Users/litvan007/Voice-commands-recognition/configs/voice_commands.yaml')
 CONTROL_CONFIG_PATH = Path('...')  # TODO
 
-MODELS_CONFIG_PATH = Path('/home/i.litvinov/Voice-commands-recognition/configs/models.yaml')
-ARM_COMMAND_CONFIG_PATH = Path('/home/i.litvinov/Voice-commands-recognition/configs/arm_commands.yaml')
+MODELS_CONFIG_PATH = Path('/Users/litvan007/Voice-commands-recognition/configs/models.yaml')
+ARM_COMMAND_CONFIG_PATH = Path('/Users/litvan007/Voice-commands-recognition/configs/arm_commands.yaml')
 
 class ArmCommandSet(BaseModel):
     commands: Dict[str, Dict[int, int]]  # label -> {channel: pulse}

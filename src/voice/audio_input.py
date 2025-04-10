@@ -162,7 +162,7 @@ class FeaturesAudio:
         elif feature_type == 'VAD':
             logger.info("Извлечение VAD-фичей через openSMILE")
             sample_rate = settings.audio_config.common.sample_rate
-            features_df = self.smile.process_signal(signal, 8000)
+            features_df = self.smile.process_signal(signal, 16000)
             features_np = features_df.to_numpy().astype(np.float32)
             logger.info(f"VAD-фичи извлечены: shape = {features_np.shape}")
             return features_np
