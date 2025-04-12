@@ -2,6 +2,7 @@
 common:
   sample_rate: 16000
   debug: False
+  desired_length: 96000
 
 # Настройки для извлечения признаков для распознавания команд
 command_features:
@@ -21,8 +22,6 @@ command_features:
 
 # Настройки для VAD
 vad_features:
-  frame_duration_ms: 30        # длина одного фрейма в миллисекундах
-  threshold: 0.5               # порог вероятности для VAD
-  smoothing_window: 5          # сглаживание выхода
-  min_speech_duration_ms: 300  # фильтр коротких звуков
-  min_silence_duration_ms: 200 # чтобы зафиксировать конец речи
+  merge_segments: True
+  merge_gap: 0.5 # в секундах
+  min_signal_lenght: 1000

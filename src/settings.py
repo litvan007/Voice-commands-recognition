@@ -17,6 +17,7 @@ class ArmCommandSet(BaseModel):
 class CommonAudioConfig(BaseModel):
     sample_rate: int
     debug: bool
+    desired_length: int
 
 class CommandFeatures(BaseModel):
     n_fft: int
@@ -32,11 +33,9 @@ class CommandFeatures(BaseModel):
     htk: Optional[bool] = False
 
 class VADFeatures(BaseModel):
-    frame_duration_ms: int
-    threshold: float
-    smoothing_window: int
-    min_speech_duration_ms: int
-    min_silence_duration_ms: int
+  merge_segments: bool
+  merge_gap: float
+  min_signal_lenght: int
 
 class AudioConfig(BaseModel):
     common: CommonAudioConfig
@@ -46,8 +45,9 @@ class AudioConfig(BaseModel):
 # --- VOICE COMMAND CONFIG ---
 
 class ConfidenceThresholds(BaseModel):
-    default: float
-    overrides: Dict[int, float]
+    vcr_default: float
+    vcr_overrides: Dict[int, float]
+    vad_default: float
 
 class VoiceCommandConfig(BaseModel):
     labels_map: Dict[int, str]

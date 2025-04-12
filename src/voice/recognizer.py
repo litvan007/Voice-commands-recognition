@@ -25,9 +25,13 @@ class SpeechCommandModel:
         self.debug = settings.debug
 
         model_path = settings.model_paths.command_recognizer
-        logger.info(f"Загрузка ONNX-модели команд: {model_path}")
-        self.session = ort.InferenceSession(model_path)
-        self.input_name = self.session.get_inputs()[0].name
+        try:
+            self.session = ort.InferenceSession(model_path)
+            logger.info(f"✅ Загрузка VCR-модели команд: {model_path}")
+            self.input_name = self.session.get_inputs()[0].name
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки VCR-модели: {e}")
 
     def _preprocess(self, mfcc: np.ndarray) -> np.ndarray:
         x = mfcc.T  # [time, features]
@@ -48,7 +52,7 @@ class SpeechCommandModel:
         probs = self.predict_proba(mfcc)
         pred_idx = int(np.argmax(probs))
         confidence = float(probs[pred_idx])
-        threshold = self.thresholds.overrides.get(pred_idx, self.thresholds.default)
+        threshold = self.thresholds.vcr_overrides.get(pred_idx, self.thresholds.vcr_default)
 
         if self.debug:
             logger.debug("Top-3 вероятности:")

@@ -1,9 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import os
+import datetime
 
 def softmax(x):
     e_x = np.exp(x - np.max(x))
     return e_x / e_x.sum(axis=0)
+
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
 
 def estimate_snr(signal: np.ndarray, sr: int = 16000, noise_sec: float = 0.5) -> float:
     """
@@ -23,67 +28,40 @@ def estimate_snr(signal: np.ndarray, sr: int = 16000, noise_sec: float = 0.5) ->
     snr_db = 10 * np.log10(power_signal / power_noise)
     return snr_db
 
-def sound_show(inp, title=None, marks_true=None, marks_pred=None, sample_rate=16000):
+def plot_vad_segments(signal: np.ndarray, sample_rate: int, segments: np.ndarray, directory: str = 'debug_plots') -> None:
     """
-    Отображает звуковой сигнал и отмечает интервалы (например, речь),
-    полученные из marks_true и marks_pred.
+    Отрисовывает график аудио сигнала с отмеченными сегментами голосовой активности.
     
-    inp         : numpy-массив звукового сигнала
-    title       : заголовок графика
-    marks_true  : метки истинной разметки (torch.Tensor или numpy-массив)
-    marks_pred  : метки предсказанной разметки (torch.Tensor или numpy-массив)
-    sample_rate : частота дискретизации сигнала
+    Аргументы:
+        signal (np.ndarray): Аудио сигнал.
+        sample_rate (int): Частота дискретизации аудио сигнала.
+        segments (np.ndarray): Массив сегментов речи в формате [[start, end], ...],
+                               где start и end заданы в отсчетах.
     """
-    time = np.linspace(0., inp.size / sample_rate, inp.size)
-    plt.figure(figsize=(16, 6))
-    signal_line, = plt.plot(time, inp, label='Signal')
-    plt.title(title)
-    
-    handles = [signal_line]
-    labels = ['Signal']
-    
-    ax = plt.gca()
-    
-    if marks_pred is not None:
-        # Преобразуем marks_pred в numpy-массив, если нужно
-        words_grid_pred = find_words_edges(marks_pred, sample_rate)
-        for edges in words_grid_pred:
-            span = ax.axvspan(edges[0], edges[1], color='green', alpha=0.2)
-        handles.append(span)
-        labels.append('Predicted speech')
-    
-    if marks_true is not None:
-        # Аналогично для marks_true
-        words_grid_true = find_words_edges(marks_true, sample_rate)
-        for edges in words_grid_true:
-            span = ax.axvspan(edges[0], edges[1], color='red', alpha=0.3, linestyle='--')
-        handles.append(span)
-        labels.append('True speech')
-    
-    plt.legend(handles, labels)
-    plt.xlabel("Time (s)")
-    plt.ylabel("Amplitude")
-    plt.tight_layout()
-    plt.show()
 
-def find_words_edges(marks, sample_rate=16000):
-    """
-    Определяет интервалы, где распознана речь (значение метки == 1).
-    marks : numpy-массив с бинарными значениями (0/1)
-    Возвращает массив интервалов [начало, конец] в секундах.
-    """
-    lst = []
-    in_speech = False
-    temp = []
-    for i, m in enumerate(marks):
-        if m == 1 and not in_speech:
-            temp = [i / sample_rate]
-            in_speech = True
-        elif m == 0 and in_speech:
-            temp.append(i / sample_rate)
-            lst.append(temp)
-            in_speech = False
-    if in_speech:
-        temp.append(len(marks) / sample_rate)
-        lst.append(temp)
-    return np.array(lst)
+    os.makedirs(directory, exist_ok=True)
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"segmented_{timestamp}.png"
+    path = os.path.join(directory, filename)
+
+    # Формируем временную ось в секундах
+    time_axis = np.linspace(0, len(signal) / sample_rate, num=len(signal))
+    
+    plt.figure(figsize=(12, 4))
+    plt.plot(time_axis, signal, label="Аудио сигнал")
+    
+    # Отмечаем на графике интервалы речи, переводя отсчёты в секунды
+    for start, end in segments:
+        plt.axvspan(start / sample_rate, end / sample_rate, color='red', alpha=0.3, label='Речь')
+    
+    # Избавляемся от дублирования меток в легенде
+    handles, labels = plt.gca().get_legend_handles_labels()
+    unique = dict(zip(labels, handles))
+    plt.legend(unique.values(), unique.keys())
+    
+    plt.xlabel("Время (с)")
+    plt.ylabel("Амплитуда")
+    plt.title("Голосовая активность")
+    plt.grid(True)
+    # plt.show()
+    plt.savefig(path)

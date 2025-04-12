@@ -36,12 +36,13 @@ def prepare_audio_device(device_index: int):
 
 
 class AudioRecorder:
-    def __init__(self, audio, device_index, device_info, sample_rate=16000, channels=1, chunk=1024):
+    def __init__(self, audio, device_index, device_info, sample_rate=16000, desired_langth=96000, channels=1, chunk=1024):
         self.audio = audio
         self.device_index = device_index
         self.device_info = device_info
         self.original_rate = int(device_info['defaultSampleRate'])
         self.target_rate = sample_rate
+        self.desired_langth = desired_langth
         self.channels = channels
         self.chunk = chunk
         self.format = pyaudio.paInt16
@@ -80,9 +81,21 @@ class AudioRecorder:
             resampled = resample_poly(audio_np, self.target_rate, self.original_rate)
             audio_np = np.clip(resampled, -32768, 32767).astype(np.int16)
 
-        return audio_np.astype(np.float32) / 32768.0
+        audio_np = audio_np.astype(np.float32) / 32768.0
+
+        valid_frames = audio_np.shape[0]
+        if valid_frames < self.desired_length:
+            pad_length = self.desired_length - valid_frames
+
+            # Берем первые 5 отсчетов сигнала
+            first_five = audio_np[:100]
+            # Заполняем недостающую часть, выбирая случайным образом из первых 5 отсчетов
+            pad_segment = np.random.choice(first_five, size=pad_length, replace=True)
+            padded_signal = np.concatenate([audio_np, pad_segment])
+
+        return padded_signal, valid_frames
     
-    def save_to_wav(self, directory: str = "debug_wavs"):
+    def save_to_wav(self, signal: np.ndarray, directory: str = "debug_wavs"):
         """
         Сохраняет текущую запись в WAV-файл с уникальным именем.
         """
@@ -92,7 +105,7 @@ class AudioRecorder:
         path = os.path.join(directory, filename)
 
         audio_int16 = (np.clip(
-            np.array(self.get_resampled_audio()) * 32768, -32768, 32767
+            np.array(signal) * 32768, -32768, 32767
         )).astype(np.int16)
 
         with wave.open(path, "wb") as wf:
@@ -161,8 +174,10 @@ class FeaturesAudio:
 
         elif feature_type == 'VAD':
             logger.info("Извлечение VAD-фичей через openSMILE")
+
             sample_rate = settings.audio_config.common.sample_rate
             features_df = self.smile.process_signal(signal, 16000)
-            features_np = features_df.to_numpy().astype(np.float32)
+            features_np = features_df.to_numpy()
+
             logger.info(f"VAD-фичи извлечены: shape = {features_np.shape}")
             return features_np
