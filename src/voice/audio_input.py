@@ -186,6 +186,7 @@ class RingBufferAudioRecorder:
         self.stream = None
         self.recording_thread = None
         self.last_vad_check = 0
+        self.debug = False
 
     def start_recording(self):
         logger.info(f"🎙 Запись с устройства [{self.device_index}]: {self.device_info['name']} @ {self.original_rate} Гц")
@@ -218,7 +219,21 @@ class RingBufferAudioRecorder:
         
         # Преобразование входных данных в numpy массив
         audio_data = np.frombuffer(in_data, dtype=np.int16)
+        if len(audio_data) == 0:
+            logger.warning("Получены пустые аудиоданные")
+            return (None, pyaudio.paContinue)
+            
         audio_data = audio_data.astype(np.float32) / 32768.0
+        
+        # Проверка на NaN и Inf
+        if np.any(np.isnan(audio_data)) or np.any(np.isinf(audio_data)):
+            logger.error("Обнаружены некорректные значения в аудиоданных (NaN или Inf)")
+            return (None, pyaudio.paContinue)
+        
+        # Проверка на переполнение буфера
+        if len(audio_data) > self.buffer_size:
+            logger.warning(f"Получено больше данных ({len(audio_data)}) чем размер буфера ({self.buffer_size})")
+            audio_data = audio_data[:self.buffer_size]
         
         # Обновление буфера - добавляем новые данные в конец
         if self.current_position + len(audio_data) <= self.buffer_size:
@@ -231,38 +246,56 @@ class RingBufferAudioRecorder:
         
         self.current_position = (self.current_position + len(audio_data)) % self.buffer_size
         
+        if self.debug:
+            logger.debug(f"Записано {len(audio_data)} сэмплов, позиция в буфере: {self.current_position}")
+            logger.debug(f"Максимальное значение в буфере: {np.max(np.abs(self.buffer))}")
+            logger.debug(f"Среднее значение в буфере: {np.mean(np.abs(self.buffer))}")
+            logger.debug(f"Количество ненулевых значений: {np.count_nonzero(self.buffer)}")
+        
         return (None, pyaudio.paContinue)
 
     def get_current_buffer(self):
         """Возвращает текущее содержимое буфера в правильном порядке"""
+        if not self.is_recording:
+            logger.warning("Попытка получить буфер, когда запись не активна")
+            return np.zeros(self.buffer_size, dtype=np.float32)
+            
         if self.current_position == 0:
-            return self.buffer.copy()
+            buffer = self.buffer.copy()
+        else:
+            # Переупорядочиваем буфер так, чтобы последние данные были в конце
+            buffer = np.zeros_like(self.buffer)
+            buffer[:self.buffer_size - self.current_position] = self.buffer[self.current_position:]
+            buffer[self.buffer_size - self.current_position:] = self.buffer[:self.current_position]
         
-        # Переупорядочиваем буфер так, чтобы последние данные были в конце
-        ordered_buffer = np.zeros_like(self.buffer)
-        ordered_buffer[:self.buffer_size - self.current_position] = self.buffer[self.current_position:]
-        ordered_buffer[self.buffer_size - self.current_position:] = self.buffer[:self.current_position]
-        return ordered_buffer
+        # Проверка на наличие данных в буфере
+        if np.all(buffer == 0):
+            logger.warning("Буфер пуст или содержит только нули")
+            
+        if self.debug:
+            logger.debug(f"Размер буфера: {len(buffer)}")
+            logger.debug(f"Максимальное значение в буфере: {np.max(np.abs(buffer))}")
+            logger.debug(f"Среднее значение в буфере: {np.mean(np.abs(buffer))}")
+            logger.debug(f"Количество ненулевых значений: {np.count_nonzero(buffer)}")
+            logger.debug(f"Позиция в буфере: {self.current_position}")
+            
+        return buffer
 
     def get_resampled_audio(self) -> np.ndarray:
-        """Возвращает текущее содержимое буфера с ресемплированием и паддингом"""
+        """Возвращает текущее содержимое буфера, ресемплированное до target_rate"""
         current_buffer = self.get_current_buffer()
         
         if self.original_rate != self.target_rate:
             logger.debug(f"Ресемплирование: {self.original_rate} → {self.target_rate}")
             resampled = resample_poly(current_buffer, self.target_rate, self.original_rate)
             current_buffer = np.clip(resampled, -1.0, 1.0)
-        
-        # Если сигнал короче желаемой длины, добавляем паддинг из начала
-        if len(current_buffer) < self.buffer_size:
-            pad_length = self.buffer_size - len(current_buffer)
-            if len(current_buffer) > 100:  # Если есть достаточно данных для паддинга
-                first_five = current_buffer[:100]
-                pad_segment = np.random.choice(first_five, size=pad_length, replace=True)
-                current_buffer = np.concatenate([current_buffer, pad_segment])
-            else:
-                # Если данных слишком мало, просто заполняем нулями
-                current_buffer = np.pad(current_buffer, (0, pad_length), mode='constant')
+            
+            if self.debug:
+                logger.debug(f"После ресемплирования:")
+                logger.debug(f"  Размер: {len(current_buffer)}")
+                logger.debug(f"  Максимальное значение: {np.max(np.abs(current_buffer))}")
+                logger.debug(f"  Среднее значение: {np.mean(np.abs(current_buffer))}")
+                logger.debug(f"  Количество ненулевых значений: {np.count_nonzero(current_buffer)}")
         
         return current_buffer, len(current_buffer)
 

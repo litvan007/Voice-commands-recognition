@@ -30,4 +30,4 @@ vad_features:
 ring_buffer:
   duration: 6  # длительность буфера в секундах
   update_interval: 1  # интервал обновления в секундах
-  use_ring_buffer: False  # использовать кольцевой буфер вместо обычной записи
+  use_ring_buffer: True  # использовать кольцевой буфер вместо обычной записи

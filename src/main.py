@@ -124,6 +124,14 @@ def main():
 
     # Однократная инициализация аудиоустройства
     audio, device_index, device_info = prepare_audio_device(2)
+    
+    if device_info is None:
+        logger.error("❌ Не удалось инициализировать аудиоустройство")
+        return
+        
+    logger.info(f"🎤 Используется аудиоустройство: {device_info['name']}")
+    logger.info(f"Частота дискретизации: {device_info['defaultSampleRate']} Hz")
+    logger.info(f"Входных каналов: {device_info['maxInputChannels']}")
 
     is_active = False
 
@@ -135,9 +143,18 @@ def main():
             device_info=device_info,
             sample_rate=settings.audio_config.common.sample_rate,
             buffer_duration=settings.audio_config.ring_buffer.duration,
-            update_interval=settings.audio_config.ring_buffer.update_interval
+            update_interval=settings.audio_config.ring_buffer.update_interval,
+            channels=device_info['maxInputChannels'],
+            chunk=1024,  # Размер чанка в сэмплах
+            debug=settings.debug
         )
-        recorder.start_recording()
+        
+        try:
+            recorder.start_recording()
+            logger.info("✅ Запись аудио запущена")
+        except Exception as e:
+            logger.error(f"❌ Ошибка при запуске записи: {e}")
+            return
 
         try:
             while True:
