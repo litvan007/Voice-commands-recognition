@@ -25,3 +25,9 @@ vad_features:
   merge_segments: True
   merge_gap: 0.5 # в секундах
   min_signal_lenght: 1000
+
+# Настройки кольцевого буфера
+ring_buffer:
+  duration: 6  # длительность буфера в секундах
+  update_interval: 1  # интервал обновления в секундах
+  use_ring_buffer: True  # использовать кольцевой буфер вместо обычной записи

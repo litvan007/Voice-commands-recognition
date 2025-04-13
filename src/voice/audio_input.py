@@ -116,6 +116,125 @@ class AudioRecorder:
 
         logger.debug(f"🎙️ Аудио сохранено: {path}")
 
+class RingBufferAudioRecorder:
+    def __init__(self, audio, device_index, device_info, sample_rate=16000, buffer_duration=6, update_interval=1, channels=1, chunk=1024):
+        self.audio = audio
+        self.device_index = device_index
+        self.device_info = device_info
+        self.original_rate = int(device_info['defaultSampleRate'])
+        self.target_rate = sample_rate
+        self.channels = channels
+        self.chunk = chunk
+        self.format = pyaudio.paInt16
+        
+        # Параметры кольцевого буфера
+        self.buffer_duration = buffer_duration  # длительность буфера в секундах
+        self.update_interval = update_interval  # интервал обновления в секундах
+        
+        # Размер буфера в сэмплах
+        self.buffer_size = int(self.buffer_duration * self.original_rate)
+        self.update_size = int(self.update_interval * self.original_rate)
+        
+        # Инициализация буфера
+        self.buffer = np.zeros(self.buffer_size, dtype=np.float32)
+        self.current_position = 0
+        self.is_recording = False
+        self.stream = None
+        self.recording_thread = None
+        self.last_vad_check = 0
+
+    def start_recording(self):
+        logger.info(f"🎙 Запись с устройства [{self.device_index}]: {self.device_info['name']} @ {self.original_rate} Гц")
+        
+        self.stream = self.audio.open(
+            format=self.format,
+            channels=self.channels,
+            rate=self.original_rate,
+            input=True,
+            input_device_index=self.device_index,
+            frames_per_buffer=self.chunk,
+            stream_callback=self._callback
+        )
+        
+        self.is_recording = True
+        self.stream.start_stream()
+        self.last_vad_check = time.time()
+
+    def stop_recording(self):
+        if self.stream is not None:
+            self.is_recording = False
+            self.stream.stop_stream()
+            self.stream.close()
+            self.stream = None
+            logger.info("📥 Запись завершена")
+
+    def _callback(self, in_data, frame_count, time_info, status):
+        if not self.is_recording:
+            return (None, pyaudio.paComplete)
+        
+        # Преобразование входных данных в numpy массив
+        audio_data = np.frombuffer(in_data, dtype=np.int16)
+        audio_data = audio_data.astype(np.float32) / 32768.0
+        
+        # Обновление буфера - добавляем новые данные в конец
+        if self.current_position + len(audio_data) <= self.buffer_size:
+            self.buffer[self.current_position:self.current_position + len(audio_data)] = audio_data
+        else:
+            # Если данные не помещаются в конец буфера, переносим их в начало
+            remaining = self.buffer_size - self.current_position
+            self.buffer[self.current_position:] = audio_data[:remaining]
+            self.buffer[:len(audio_data) - remaining] = audio_data[remaining:]
+        
+        self.current_position = (self.current_position + len(audio_data)) % self.buffer_size
+        
+        return (None, pyaudio.paContinue)
+
+    def get_current_buffer(self):
+        """Возвращает текущее содержимое буфера в правильном порядке"""
+        if self.current_position == 0:
+            return self.buffer.copy()
+        
+        # Переупорядочиваем буфер так, чтобы последние данные были в конце
+        ordered_buffer = np.zeros_like(self.buffer)
+        ordered_buffer[:self.buffer_size - self.current_position] = self.buffer[self.current_position:]
+        ordered_buffer[self.buffer_size - self.current_position:] = self.buffer[:self.current_position]
+        return ordered_buffer
+
+    def get_resampled_audio(self) -> np.ndarray:
+        """Возвращает текущее содержимое буфера с ресемплированием и паддингом"""
+        current_buffer = self.get_current_buffer()
+        
+        if self.original_rate != self.target_rate:
+            logger.debug(f"Ресемплирование: {self.original_rate} → {self.target_rate}")
+            resampled = resample_poly(current_buffer, self.target_rate, self.original_rate)
+            current_buffer = np.clip(resampled, -1.0, 1.0)
+        
+        # Если сигнал короче желаемой длины, добавляем паддинг из начала
+        if len(current_buffer) < self.buffer_size:
+            pad_length = self.buffer_size - len(current_buffer)
+            if len(current_buffer) > 100:  # Если есть достаточно данных для паддинга
+                first_five = current_buffer[:100]
+                pad_segment = np.random.choice(first_five, size=pad_length, replace=True)
+                current_buffer = np.concatenate([current_buffer, pad_segment])
+            else:
+                # Если данных слишком мало, просто заполняем нулями
+                current_buffer = np.pad(current_buffer, (0, pad_length), mode='constant')
+        
+        return current_buffer, len(current_buffer)
+
+    def clear_buffer(self):
+        """Очищает буфер"""
+        self.buffer.fill(0)
+        self.current_position = 0
+
+    def should_check_vad(self) -> bool:
+        """Проверяет, нужно ли запускать VAD"""
+        current_time = time.time()
+        if current_time - self.last_vad_check >= self.update_interval:
+            self.last_vad_check = current_time
+            return True
+        return False
+
 class FeaturesAudio:
     def __init__(self):
         self.smile = opensmile.Smile(
