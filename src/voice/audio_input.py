@@ -49,8 +49,11 @@ def prepare_audio_device(device_index: int):
         raise ValueError(f"Устройство {device_index} не поддерживает ввод аудио!")
 
     print("\n🎤 Используется аудиоустройство:")
-    print(f"[{device_index}] {device_info['name']} @ {device_info['defaultSampleRate']} Hz")
+    print(f"[{device_index}] {device_info['name']}")
+    print(f"Частота дискретизации: {device_info['defaultSampleRate']} Hz")
     print(f"Входных каналов: {device_info['maxInputChannels']}")
+    print(f"Формат: {device_info['defaultSampleFormat']}")
+    print(f"Размер буфера: {device_info['defaultLowInputLatency']}")
 
     return audio, device_index, device_info
 

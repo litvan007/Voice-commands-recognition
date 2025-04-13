@@ -96,7 +96,7 @@ def main():
     arm = ArmController(pca)
 
     # Однократная инициализация аудиоустройства
-    audio, device_index, device_info = prepare_audio_device(2)
+    audio, device_index, device_info = prepare_audio_device(3)
 
     is_active = False
 
