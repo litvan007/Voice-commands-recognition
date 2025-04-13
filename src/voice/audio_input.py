@@ -18,8 +18,15 @@ import time
 from settings import Settings
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)  # можно сделать DEBUG при отладке
+logger.setLevel(logging.DEBUG)  # Уровень будет контролироваться в main.py
+
+# Отключаем логирование для других модулей
 logging.getLogger("pyaudio").setLevel(logging.WARNING)
+logging.getLogger("matplotlib").setLevel(logging.WARNING)
+logging.getLogger("librosa").setLevel(logging.WARNING)
+logging.getLogger("sounddevice").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("PIL").setLevel(logging.WARNING)
 
 
 def list_audio_devices():

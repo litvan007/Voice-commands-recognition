@@ -10,10 +10,31 @@ import numpy as np
 import time
 
 def setup_logging(debug: bool):
-    logging.basicConfig(
-        level=logging.DEBUG if debug else logging.INFO,
-        format='[%(asctime)s] %(levelname)s: %(message)s',
-    )
+    # Настраиваем корневой логгер
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.WARNING)  # Устанавливаем высокий уровень для корневого логгера
+    
+    # Настраиваем наш логгер
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG if debug else logging.INFO)
+    
+    # Создаем форматтер
+    formatter = logging.Formatter('[%(asctime)s] %(levelname)s: %(message)s')
+    
+    # Создаем обработчик для вывода в консоль
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    
+    # Добавляем обработчик только к нашему логгеру
+    logger.addHandler(console_handler)
+    
+    # Отключаем логирование для других модулей
+    logging.getLogger("pyaudio").setLevel(logging.WARNING)
+    logging.getLogger("matplotlib").setLevel(logging.WARNING)
+    logging.getLogger("librosa").setLevel(logging.WARNING)
+    logging.getLogger("sounddevice").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("PIL").setLevel(logging.WARNING)
 
 
 def process_command(signal, valid_frames, settings, audio_extractor, vad, model, arm, is_active):
