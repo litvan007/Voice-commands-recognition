@@ -96,27 +96,43 @@ class AudioRecorder:
         logger.info("📥 Запись завершена")
 
     def get_resampled_audio(self) -> np.ndarray:
-        audio_data = b''.join(self.frames)
-        audio_np = np.frombuffer(audio_data, dtype=np.int16)
+        if not self.frames:
+            logger.error("Нет аудиоданных для обработки")
+            return np.zeros(self.desired_length), 0
+
+        # Объединяем все фреймы
+        audio_np = np.concatenate(self.frames, axis=0)
+        audio_np = audio_np.squeeze()  # Убираем лишнюю размерность если есть
+
+        logger.debug(f"Максимальное значение до ресемплирования: {np.max(np.abs(audio_np))}")
 
         if self.original_rate != self.target_rate:
             logger.debug(f"Ресемплирование: {self.original_rate} → {self.target_rate}")
             resampled = resample_poly(audio_np, self.target_rate, self.original_rate)
-            audio_np = np.clip(resampled, -32768, 32767).astype(np.int16)
-
-        audio_np = audio_np.astype(np.float32) / 32768.0
+            
+            # Нормализуем значения перед клиппингом
+            max_val = np.max(np.abs(resampled))
+            if max_val > 0:
+                resampled = resampled / max_val
+            
+            audio_np = np.clip(resampled, -1.0, 1.0)
+            logger.debug(f"Максимальное значение после ресемплирования: {np.max(np.abs(audio_np))}")
 
         valid_frames = audio_np.shape[0]
         if valid_frames < self.desired_length:
             pad_length = self.desired_length - valid_frames
-
-            # Берем первые 5 отсчетов сигнала
-            first_five = audio_np[:100]
-            # Заполняем недостающую часть, выбирая случайным образом из первых 5 отсчетов
-            pad_segment = np.random.choice(first_five, size=pad_length, replace=True)
+            logger.debug(f"Добавление паддинга: {pad_length} сэмплов")
+            
+            if valid_frames > 100:
+                last_hundred = audio_np[-100:]
+                pad_segment = np.random.choice(last_hundred, size=pad_length, replace=True)
+            else:
+                pad_segment = np.zeros(pad_length)
+            
             padded_signal = np.concatenate([audio_np, pad_segment])
-
-        return padded_signal, valid_frames
+            return padded_signal, valid_frames
+        else:
+            return audio_np, valid_frames
     
     def save_to_wav(self, signal: np.ndarray, directory: str = "debug_wavs"):
         """
