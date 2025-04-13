@@ -173,7 +173,6 @@ class ArmController:
         if not motion:
             logger.warning(f"Неизвестная команда '{command}'")
             return
-
         logger.info(f"Выполнение команды: {command}")
 
         for channel, final_angle in motion.items():

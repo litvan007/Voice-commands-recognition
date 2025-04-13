@@ -129,7 +129,7 @@ def main():
     i2c_bus = smbus.SMBus(1)
     pca = PCA9685(i2c_bus)
     arm = ArmController(pca)
-    sound = SoundController(pca, settings)
+    sound = SoundController(settings)
 
     # Однократная инициализация аудиоустройства
     audio, device_index, device_info = prepare_audio_device(2)

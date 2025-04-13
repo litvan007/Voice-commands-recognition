@@ -1,24 +1,27 @@
 import time
 from settings import Settings
+import RPi.GPIO as GPIO
 
 class SoundController:
-    def __init__(self, pca, settings: Settings):
-        self.pca = pca
+    def __init__(self, settings: Settings):
         self.settings = settings
-        self.pca.frequency = 1000  # Базовая частота ШИМ
+        self.BUZZER_PIN = 16
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(self.BUZZER_PIN, GPIO.OUT)
         
     def play_sound(self, sound_type: str):
         """Воспроизводит звук указанного типа"""
         sound_config = getattr(self.settings.sounds, sound_type)
         
         # Включаем звук (50% скважность)
-        self.pca.channels[sound_config.channel].duty_cycle = 0x7FFF
+        pwm = GPIO.PWM(self.BUZZER_PIN, sound_config.frequency) 
+        pwm.start(100)
         
         # Ждем указанное время
         time.sleep(sound_config.duration)
         
         # Выключаем звук
-        self.pca.channels[sound_config.channel].duty_cycle = 0
+        pwm.stop()
         
     def play_start(self):
         """Воспроизводит звук при старте"""
