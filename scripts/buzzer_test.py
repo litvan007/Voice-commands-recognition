@@ -1,19 +1,14 @@
-from adafruit_pca9685 import PCA9685
-from board import SCL, SDA
-import busio
+import RPi.GPIO as GPIO
 import time
 
-# I2C setup
-i2c = busio.I2C(SCL, SDA)
-pca = PCA9685(i2c)
-pca.frequency = 1000  # Частота в Гц
+BUZZER_PIN = 18  # номер GPIO, не физический пин
 
-channel = 15
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(BUZZER_PIN, GPIO.OUT)
 
-# Включить звук (50% скважность)
-pca.channels[channel].duty_cycle = 0x7FFF  # Половина максимума
+# Писк 0.2 сек
+GPIO.output(BUZZER_PIN, GPIO.HIGH)
+time.sleep(0.2)
+GPIO.output(BUZZER_PIN, GPIO.LOW)
 
-time.sleep(0.1)
-
-# Выключить звук
-pca.channels[channel].duty_cycle = 0
+GPIO.cleanup()
