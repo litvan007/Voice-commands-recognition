@@ -1,9 +1,9 @@
-numpy>=1.21.0
-librosa>=0.9.0
-pyaudio>=0.2.11
-scipy>=1.7.0
-opensmile-python>=0.0.1
-onnxruntime>=1.10.0
-PyYAML>=6.0
-smbus2>=0.4.1
-matplotlib>=3.5.0  # для plot_vad_segments 
+numpy==1.24.3
+librosa==0.10.1
+pyaudio==0.2.13
+scipy==1.10.1
+opensmile==2.4.1
+onnxruntime==1.15.1
+PyYAML==6.0.1
+smbus==1.1
+matplotlib==3.7.1  # для plot_vad_segments 
