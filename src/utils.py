@@ -28,40 +28,44 @@ def estimate_snr(signal: np.ndarray, sr: int = 16000, noise_sec: float = 0.5) ->
     snr_db = 10 * np.log10(power_signal / power_noise)
     return snr_db
 
-def plot_vad_segments(signal: np.ndarray, sample_rate: int, segments: np.ndarray, directory: str = 'debug_plots') -> None:
+def plot_vad_segments(signal: np.ndarray, sample_rate: int, segments: list, command_name: str = None):
     """
-    Отрисовывает график аудио сигнала с отмеченными сегментами голосовой активности.
+    Отрисовывает график сигнала с выделенными сегментами голосовой активности.
     
-    Аргументы:
-        signal (np.ndarray): Аудио сигнал.
-        sample_rate (int): Частота дискретизации аудио сигнала.
-        segments (np.ndarray): Массив сегментов речи в формате [[start, end], ...],
-                               где start и end заданы в отсчетах.
+    Args:
+        signal: Аудиосигнал
+        sample_rate: Частота дискретизации
+        segments: Список сегментов в формате [(start, end), ...]
+        command_name: Название распознанной команды (опционально)
     """
-
-    os.makedirs(directory, exist_ok=True)
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"segmented_{timestamp}.png"
-    path = os.path.join(directory, filename)
-
-    # Формируем временную ось в секундах
-    time_axis = np.linspace(0, len(signal) / sample_rate, num=len(signal))
+    # Создаем временную ось
+    time = np.arange(len(signal)) / sample_rate
     
+    # Создаем график
     plt.figure(figsize=(12, 4))
-    plt.plot(time_axis, signal, label="Аудио сигнал")
     
-    # Отмечаем на графике интервалы речи, переводя отсчёты в секунды
+    # Рисуем сигнал
+    plt.plot(time, signal, alpha=0.5, label='Сигнал')
+    
+    # Выделяем сегменты голосовой активности
     for start, end in segments:
-        plt.axvspan(start / sample_rate, end / sample_rate, color='red', alpha=0.3, label='Речь')
+        plt.axvspan(start/sample_rate, end/sample_rate, 
+                   color='red', alpha=0.3, label='Голосовая активность')
     
-    # Избавляемся от дублирования меток в легенде
+    # Добавляем название команды в заголовок, если оно предоставлено
+    title = "Сегменты голосовой активности"
+    if command_name:
+        title += f" - Команда: {command_name}"
+    
+    plt.title(title)
+    plt.xlabel('Время (с)')
+    plt.ylabel('Амплитуда')
+    
+    # Убираем дублирующиеся легенды
     handles, labels = plt.gca().get_legend_handles_labels()
-    unique = dict(zip(labels, handles))
-    plt.legend(unique.values(), unique.keys())
+    by_label = dict(zip(labels, handles))
+    plt.legend(by_label.values(), by_label.keys())
     
-    plt.xlabel("Время (с)")
-    plt.ylabel("Амплитуда")
-    plt.title("Голосовая активность")
     plt.grid(True)
-    # plt.show()
-    plt.savefig(path)
+    plt.tight_layout()
+    plt.show()

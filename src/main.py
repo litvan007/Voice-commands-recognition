@@ -63,11 +63,17 @@ def process_command(signal, valid_frames, settings, audio_extractor, vad, model,
 
         if settings.debug:
             logger.debug("Отрисовка графика с границами")
-            plot_vad_segments(signal, settings.audio_config.common.sample_rate, segments)
+            plot_vad_segments(signal, settings.audio_config.common.sample_rate, segments, label)
 
         # -- Recognition --
         mfcc = audio_extractor.get_features(speech_signal, settings, feature_type="VCR")
         label, confidence = model.predict(mfcc)
+
+        if settings.debug:
+            top_commands = model.predict_top_k(mfcc, k=3)
+            logger.debug("Top-3 команды:")
+            for cmd, prob in top_commands:
+                logger.debug(f"  {cmd:<12} — {prob:.4f}")
 
         if label is None:
             logger.warning(f"Команда отвергнута: низкая уверенность (p={confidence:.2f})")
