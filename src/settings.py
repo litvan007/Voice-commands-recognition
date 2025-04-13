@@ -6,6 +6,7 @@ from pathlib import Path
 AUDIO_CONFIG_PATH = Path('/home/i.litvinov/Voice-commands-recognition/configs/audio_config.yaml')
 VOICE_COMMAND_CONFIG_PATH = Path('/home/i.litvinov/Voice-commands-recognition/configs/voice_commands.yaml')
 CONTROL_CONFIG_PATH = Path('...')  # TODO
+SOUNDS_CONFIG_PATH = Path('/home/i.litvinov/Voice-commands-recognition/configs/sounds.yaml')
 
 MODELS_CONFIG_PATH = Path('/home/i.litvinov/Voice-commands-recognition/configs/models.yaml')
 ARM_COMMAND_CONFIG_PATH = Path('/home/i.litvinov/Voice-commands-recognition/configs/arm_commands.yaml')
@@ -69,6 +70,20 @@ class ModelPaths(BaseModel):
 class ModelConfig(BaseModel):
     models: ModelPaths
 
+# --- SOUNDS CONFIG ---
+
+class SoundConfig(BaseModel):
+    frequency: int
+    duration: float
+    channel: int
+
+class SoundsConfig(BaseModel):
+    start: SoundConfig
+    stop: SoundConfig
+    action_start: SoundConfig
+    action_end: SoundConfig
+    recognition_failed: SoundConfig
+
 # --- SETTINGS CLASS ---
 
 class Settings(BaseModel):
@@ -76,24 +91,32 @@ class Settings(BaseModel):
     audio_config: AudioConfig
     voice_command_config: VoiceCommandConfig
     model_paths: ModelPaths
+    sounds: SoundsConfig
     debug: bool
 
     @classmethod
     def load(cls) -> "Settings":
-        with open(ARM_COMMAND_CONFIG_PATH, "r", encoding="utf-8") as f:
-            arm_data = yaml.safe_load(f)
-        with open(AUDIO_CONFIG_PATH, "r", encoding="utf-8") as f:
-            audio_data = yaml.safe_load(f)
-        with open(VOICE_COMMAND_CONFIG_PATH, "r", encoding="utf-8") as f:
-            vc_data = yaml.safe_load(f)
-        with open(MODELS_CONFIG_PATH, "r", encoding="utf-8") as f:
-            model_data = yaml.safe_load(f)
+        with open(AUDIO_CONFIG_PATH) as f:
+            audio_config = AudioConfig(**yaml.safe_load(f))
+            
+        with open(VOICE_COMMAND_CONFIG_PATH) as f:
+            voice_command_config = VoiceCommandConfig(**yaml.safe_load(f))
+            
+        with open(ARM_COMMAND_CONFIG_PATH) as f:
+            arm_commands = ArmCommandSet(**yaml.safe_load(f))
+            
+        with open(MODELS_CONFIG_PATH) as f:
+            model_paths = ModelPaths(**yaml.safe_load(f)['models'])
+            
+        with open(SOUNDS_CONFIG_PATH) as f:
+            sounds = SoundsConfig(**yaml.safe_load(f)['sounds'])
 
         return cls(
-            audio_config=AudioConfig(**audio_data),
-            voice_command_config=VoiceCommandConfig(**vc_data),
-            model_paths=ModelPaths(**model_data["models"]),
-            arm_commands=ArmCommandSet(**arm_data),
-            debug=AudioConfig(**audio_data).common.debug
+            arm_commands=arm_commands,
+            audio_config=audio_config,
+            voice_command_config=voice_command_config,
+            model_paths=model_paths,
+            sounds=sounds,
+            debug=audio_config.common.debug
         )
 

@@ -5,6 +5,7 @@ from voice.audio_input import AudioRecorder, RingBufferAudioRecorder, FeaturesAu
 from voice.recognizer import SpeechCommandModel
 from voice.vad import EmobaseCNN
 from control.controller import PCA9685, ArmController
+from control.sound import SoundController
 from utils import estimate_snr, plot_vad_segments
 import numpy as np
 import time
@@ -37,7 +38,7 @@ def setup_logging(debug: bool):
     logging.getLogger("PIL").setLevel(logging.WARNING)
 
 
-def process_command(signal, valid_frames, settings, audio_extractor, vad, model, arm, is_active):
+def process_command(signal, valid_frames, settings, audio_extractor, vad, model, arm, sound, is_active):
     """Обработка команды из аудиосигнала"""
     logger = logging.getLogger(__name__)
     
@@ -77,6 +78,7 @@ def process_command(signal, valid_frames, settings, audio_extractor, vad, model,
 
         if label is None:
             logger.warning(f"Команда отвергнута: низкая уверенность (p={confidence:.2f})")
+            sound.play_recognition_failed()
             return is_active, False
 
         logger.info(f"✅ Распознана команда: {label} (p={confidence:.2f})")
@@ -84,23 +86,29 @@ def process_command(signal, valid_frames, settings, audio_extractor, vad, model,
         if label.lower() == "старт":
             is_active = True
             logger.info("🎬 Система активирована")
+            sound.play_start()
             arm.load_servo_positions()
 
         elif label.lower() == "стоп":
             is_active = False
             logger.info("🛑 Система остановлена")
+            sound.play_stop()
             arm.save_servo_positions()
 
         elif is_active and label.lower() == "остановиться":
             logger.info("⏹ Экстренное прерывание")
+            sound.play_stop()
             arm.disable_all_servos()
             arm.save_servo_positions()
 
         elif is_active:
+            sound.play_action_start()
             arm.execute_command(label, settings)
+            sound.play_action_end()
 
         else:
             logger.info("⚠️ Система неактивна. Произнесите «Старт» для начала.")
+            sound.play_recognition_failed()
 
         return is_active, True
 
@@ -121,6 +129,7 @@ def main():
     i2c_bus = smbus.SMBus(1)
     pca = PCA9685(i2c_bus)
     arm = ArmController(pca)
+    sound = SoundController(pca, settings)
 
     # Однократная инициализация аудиоустройства
     audio, device_index, device_info = prepare_audio_device(2)
@@ -166,7 +175,7 @@ def main():
                     signal, valid_frames = recorder.get_resampled_audio()
                     
                     is_active, command_processed = process_command(
-                        signal, valid_frames, settings, audio_extractor, vad, model, arm, is_active
+                        signal, valid_frames, settings, audio_extractor, vad, model, arm, sound, is_active
                     )
                     
                     if command_processed:
@@ -197,7 +206,7 @@ def main():
                 recorder.save_to_wav(signal)
 
             is_active, _ = process_command(
-                signal, valid_frames, settings, audio_extractor, vad, model, arm, is_active
+                signal, valid_frames, settings, audio_extractor, vad, model, arm, sound, is_active
             )
 
 

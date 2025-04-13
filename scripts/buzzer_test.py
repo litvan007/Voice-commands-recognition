@@ -8,12 +8,12 @@ i2c = busio.I2C(SCL, SDA)
 pca = PCA9685(i2c)
 pca.frequency = 1000  # Частота в Гц
 
-channel = 0  # <- Укажи, к какому порту ты подключил (от 0 до 15)
+channel = 15
 
 # Включить звук (50% скважность)
 pca.channels[channel].duty_cycle = 0x7FFF  # Половина максимума
 
-time.sleep(1)
+time.sleep(0.1)
 
 # Выключить звук
 pca.channels[channel].duty_cycle = 0
