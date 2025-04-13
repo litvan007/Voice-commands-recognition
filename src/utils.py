@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import datetime
+from typing import Optional
 
 def softmax(x):
     e_x = np.exp(x - np.max(x))
@@ -28,44 +29,43 @@ def estimate_snr(signal: np.ndarray, sr: int = 16000, noise_sec: float = 0.5) ->
     snr_db = 10 * np.log10(power_signal / power_noise)
     return snr_db
 
-def plot_vad_segments(signal: np.ndarray, sample_rate: int, segments: list, command_name: str = None):
+def plot_vad_segments(signal: np.ndarray, sample_rate: int, segments: np.ndarray, command_name: Optional[str] = None):
     """
-    Отрисовывает график сигнала с выделенными сегментами голосовой активности.
+    Визуализирует аудиосигнал с выделенными сегментами речи.
     
     Args:
         signal: Аудиосигнал
         sample_rate: Частота дискретизации
-        segments: Список сегментов в формате [(start, end), ...]
+        segments: Массив сегментов в формате [[start1, end1], [start2, end2], ...]
         command_name: Название распознанной команды (опционально)
     """
-    # Создаем временную ось
-    time = np.arange(len(signal)) / sample_rate
+    plt.figure(figsize=(15, 5))
     
-    # Создаем график
-    plt.figure(figsize=(12, 4))
+    # Создаем временную ось
+    time = np.linspace(0, len(signal) / sample_rate, len(signal))
     
     # Рисуем сигнал
-    plt.plot(time, signal, alpha=0.5, label='Сигнал')
+    plt.plot(time, signal, alpha=0.5, label='Аудиосигнал')
     
-    # Выделяем сегменты голосовой активности
+    # Выделяем сегменты речи
     for start, end in segments:
-        plt.axvspan(start/sample_rate, end/sample_rate, 
-                   color='red', alpha=0.3, label='Голосовая активность')
+        plt.axvspan(start/sample_rate, end/sample_rate, color='red', alpha=0.3)
     
     # Добавляем название команды в заголовок, если оно предоставлено
-    title = "Сегменты голосовой активности"
-    if command_name:
-        title += f" - Команда: {command_name}"
-    
+    title = "Распознанная команда: " + command_name if command_name else "Границы речевых сегментов"
     plt.title(title)
     plt.xlabel('Время (с)')
     plt.ylabel('Амплитуда')
-    
-    # Убираем дублирующиеся легенды
-    handles, labels = plt.gca().get_legend_handles_labels()
-    by_label = dict(zip(labels, handles))
-    plt.legend(by_label.values(), by_label.keys())
-    
     plt.grid(True)
-    plt.tight_layout()
-    plt.show()
+    plt.legend()
+    
+    # Создаем директорию для графиков, если её нет
+    os.makedirs('debug_plots', exist_ok=True)
+    
+    # Сохраняем график в файл
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = os.path.join('debug_plots', f"vad_segments_{timestamp}.png")
+    plt.savefig(filename)
+    plt.close()
+    
+    logger.debug(f"График сохранен в файл: {filename}")
