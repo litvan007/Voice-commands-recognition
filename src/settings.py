@@ -3,12 +3,12 @@ from typing import Dict, Optional
 import yaml
 from pathlib import Path
 # Пути к конфигам
-AUDIO_CONFIG_PATH = Path('/Users/litvan007/Voice-commands-recognition/configs/audio_config.yaml')
-VOICE_COMMAND_CONFIG_PATH = Path('/Users/litvan007/Voice-commands-recognition/configs/voice_commands.yaml')
+AUDIO_CONFIG_PATH = Path('/home/i.litvinov/Voice-commands-recognition/configs/audio_config.yaml')
+VOICE_COMMAND_CONFIG_PATH = Path('/home/i.litvinov/Voice-commands-recognition/configs/voice_commands.yaml')
 CONTROL_CONFIG_PATH = Path('...')  # TODO
 
-MODELS_CONFIG_PATH = Path('/Users/litvan007/Voice-commands-recognition/configs/models.yaml')
-ARM_COMMAND_CONFIG_PATH = Path('/Users/litvan007/Voice-commands-recognition/configs/arm_commands.yaml')
+MODELS_CONFIG_PATH = Path('/home/i.litvinov/Voice-commands-recognition/configs/models.yaml')
+ARM_COMMAND_CONFIG_PATH = Path('/home/i.litvinov/Voice-commands-recognition/configs/arm_commands.yaml')
 
 class ArmCommandSet(BaseModel):
     commands: Dict[str, Dict[int, int]]  # label -> {channel: pulse}
@@ -33,14 +33,20 @@ class CommandFeatures(BaseModel):
     htk: Optional[bool] = False
 
 class VADFeatures(BaseModel):
-  merge_segments: bool
-  merge_gap: float
-  min_signal_lenght: int
+    merge_segments: bool
+    merge_gap: float   
+    min_signal_lenght: int
+
+class RingBuffer(BaseModel):
+    duration: int
+    update_interval: int
+    use_ring_buffer: bool
 
 class AudioConfig(BaseModel):
     common: CommonAudioConfig
     command_features: CommandFeatures
     vad_features: VADFeatures
+    ring_buffer: RingBuffer
 
 # --- VOICE COMMAND CONFIG ---
 

@@ -1,7 +1,7 @@
 # Общие настройки аудио
 common:
   sample_rate: 16000
-  debug: False
+  debug: True
   desired_length: 96000
 
 # Настройки для извлечения признаков для распознавания команд
@@ -30,4 +30,4 @@ vad_features:
 ring_buffer:
   duration: 6  # длительность буфера в секундах
   update_interval: 1  # интервал обновления в секундах
-  use_ring_buffer: True  # использовать кольцевой буфер вместо обычной записи
+  use_ring_buffer: False  # использовать кольцевой буфер вместо обычной записи

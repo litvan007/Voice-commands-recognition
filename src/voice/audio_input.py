@@ -36,13 +36,13 @@ def prepare_audio_device(device_index: int):
 
 
 class AudioRecorder:
-    def __init__(self, audio, device_index, device_info, sample_rate=16000, desired_langth=96000, channels=1, chunk=1024):
+    def __init__(self, audio, device_index, device_info, sample_rate=16000, desired_length=96000, channels=1, chunk=1024):
         self.audio = audio
         self.device_index = device_index
         self.device_info = device_info
         self.original_rate = int(device_info['defaultSampleRate'])
         self.target_rate = sample_rate
-        self.desired_langth = desired_langth
+        self.desired_length = desired_length
         self.channels = channels
         self.chunk = chunk
         self.format = pyaudio.paInt16

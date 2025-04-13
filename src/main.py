@@ -24,10 +24,13 @@ def process_command(signal, valid_frames, settings, audio_extractor, vad, model,
         snr = estimate_snr(signal)
         logger.debug(f"SNR: {snr:.2f} dB")
 
+
     # -- Segmentation -- 
     vad_features = audio_extractor.get_features(signal, settings, feature_type="VAD")
     vad_mask = vad.predict(vad_features)
     segments = vad.segment(vad_mask, valid_frames)
+
+    print( segments )
 
     if len(segments) > 0:
         logger.info(f"VAD модель обнаружила голосовую активность. Отсчетов: {segments}")
@@ -138,13 +141,16 @@ def main():
                 device_index=device_index,
                 device_info=device_info,
                 sample_rate=settings.audio_config.common.sample_rate,
-                desired_langth=settings.audio_config.common.desired_langth
+                desired_length=settings.audio_config.common.desired_length
             )
 
             recorder.frames.clear()
             recorder.stop_recording = False
             recorder.start_recording()
             signal, valid_frames = recorder.get_resampled_audio()
+
+            if settings.debug:
+                recorder.save_to_wav(signal)
 
             is_active, _ = process_command(
                 signal, valid_frames, settings, audio_extractor, vad, model, arm, is_active
