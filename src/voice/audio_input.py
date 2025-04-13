@@ -100,10 +100,8 @@ class AudioRecorder:
             logger.error("Нет аудиоданных для обработки")
             return np.zeros(self.desired_length), 0
 
-        # Объединяем все фреймы
-        audio_np = np.concatenate(self.frames, axis=0)
-        audio_np = audio_np.squeeze()  # Убираем лишнюю размерность если есть
-
+        audio_data = b''.join(self.frames)
+        audio_np = np.frombuffer(audio_data, dtype=np.int16)
         logger.debug(f"Максимальное значение до ресемплирования: {np.max(np.abs(audio_np))}")
 
         if self.original_rate != self.target_rate:
