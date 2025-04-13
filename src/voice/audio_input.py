@@ -22,6 +22,22 @@ logger.setLevel(logging.DEBUG)  # можно сделать DEBUG при отл�
 logging.getLogger("pyaudio").setLevel(logging.WARNING)
 
 
+def list_audio_devices():
+    """
+    Выводит список всех доступных аудиоустройств с их параметрами.
+    """
+    audio = pyaudio.PyAudio()
+    print("\nДоступные аудиоустройства:")
+    for i in range(audio.get_device_count()):
+        info = audio.get_device_info_by_index(i)
+        print(f"\nУстройство {i}:")
+        print(f"  Имя: {info['name']}")
+        print(f"  Макс. входных каналов: {info['maxInputChannels']}")
+        print(f"  Частота дискретизации: {info['defaultSampleRate']} Hz")
+        print(f"  Поддерживает ввод: {'Да' if info['maxInputChannels'] > 0 else 'Нет'}")
+    audio.terminate()
+
+
 def prepare_audio_device(device_index: int):
     """
     Один раз инициализирует PyAudio и возвращает выбранное устройство.
@@ -29,8 +45,12 @@ def prepare_audio_device(device_index: int):
     audio = pyaudio.PyAudio()
     device_info = audio.get_device_info_by_index(device_index)
 
-    print("🎤 Используется аудиоустройство:")
+    if device_info['maxInputChannels'] == 0:
+        raise ValueError(f"Устройство {device_index} не поддерживает ввод аудио!")
+
+    print("\n🎤 Используется аудиоустройство:")
     print(f"[{device_index}] {device_info['name']} @ {device_info['defaultSampleRate']} Hz")
+    print(f"Входных каналов: {device_info['maxInputChannels']}")
 
     return audio, device_index, device_info
 
