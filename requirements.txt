@@ -6,4 +6,5 @@ opensmile==2.4.1
 onnxruntime==1.17.0
 PyYAML==6.0.1
 smbus
-matplotlib==3.8.3  # для plot_vad_segments 
+matplotlib==3.8.3
+adafruit-circuitpython-pca9685  # для plot_vad_segments 

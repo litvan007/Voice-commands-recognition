@@ -1,26 +1,19 @@
-import RPi.GPIO as GPIO
+from adafruit_pca9685 import PCA9685
+from board import SCL, SDA
+import busio
 import time
 
-BUZZER_PIN = 18
-NOTES = {
-    'C4': 261,
-    'D4': 294,
-    'E4': 329,
-    'F4': 349,
-    'G4': 392,
-    'A4': 440,
-    'B4': 493,
-    'C5': 523
-}
+# I2C setup
+i2c = busio.I2C(SCL, SDA)
+pca = PCA9685(i2c)
+pca.frequency = 1000  # Частота в Гц
 
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(BUZZER_PIN, GPIO.OUT)
-pwm = GPIO.PWM(BUZZER_PIN, 440)  # начальная частота
-pwm.start(50)
+channel = 0  # <- Укажи, к какому порту ты подключил (от 0 до 15)
 
-for note, freq in NOTES.items():
-    pwm.ChangeFrequency(freq)
-    time.sleep(0.3)
+# Включить звук (50% скважность)
+pca.channels[channel].duty_cycle = 0x7FFF  # Половина максимума
 
-pwm.stop()
-GPIO.cleanup()
+time.sleep(1)
+
+# Выключить звук
+pca.channels[channel].duty_cycle = 0
