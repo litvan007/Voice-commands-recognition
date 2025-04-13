@@ -28,4 +28,4 @@ confidence_thresholds:
       16: 0.3
       17: 0.41
 
-  vad_default: 0.9999
+  vad_default: 0.995

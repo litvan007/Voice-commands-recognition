@@ -63,9 +63,8 @@ def plot_vad_segments(signal: np.ndarray, sample_rate: int, segments: np.ndarray
     os.makedirs('debug_plots', exist_ok=True)
     
     # Сохраняем график в файл
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = os.path.join('debug_plots', f"vad_segments_{timestamp}.png")
     plt.savefig(filename)
     plt.close()
     
-    logger.debug(f"График сохранен в файл: {filename}")

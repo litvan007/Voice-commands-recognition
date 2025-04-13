@@ -61,10 +61,6 @@ def process_command(signal, valid_frames, settings, audio_extractor, vad, model,
             logger.info("📉 Слишком короткий речевой сегмент — пропуск")
             return is_active, False
 
-        if settings.debug:
-            logger.debug("Отрисовка графика с границами")
-            plot_vad_segments(signal, settings.audio_config.common.sample_rate, segments, label)
-
         # -- Recognition --
         mfcc = audio_extractor.get_features(speech_signal, settings, feature_type="VCR")
         label, confidence = model.predict(mfcc)
@@ -74,6 +70,10 @@ def process_command(signal, valid_frames, settings, audio_extractor, vad, model,
             logger.debug("Top-3 команды:")
             for cmd, prob in top_commands:
                 logger.debug(f"  {cmd:<12} — {prob:.4f}")
+
+            logger.debug("Отрисовка графика с границами")
+            plot_vad_segments(signal, settings.audio_config.common.sample_rate, segments, label)
+
 
         if label is None:
             logger.warning(f"Команда отвергнута: низкая уверенность (p={confidence:.2f})")
@@ -123,7 +123,7 @@ def main():
     arm = ArmController(pca)
 
     # Однократная инициализация аудиоустройства
-    audio, device_index, device_info = prepare_audio_device(3)
+    audio, device_index, device_info = prepare_audio_device(2)
 
     is_active = False
 
