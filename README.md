@@ -51,8 +51,8 @@ python src/main_live.py
 
 ## 📎 Полезные материалы
 
-- [Курсовая работа (PDF)](https://drive.google.com/file/d/11rhhHlpCGn5K0mW3c9JeV_xrkdxU3kJA/view?usp=sharing)
-- [Презентация (PDF)](https://drive.google.com/file/d/1tvHh7ueNbYsCHxUspxGmCxzYl4MTwVoK/view?usp=sharing)
+- [Дипломная работа (PDF)](https://drive.google.com/file/d/1OXwZQ0zK0EoW0BgtRffZNdBDLhjq4Iub/view?usp=sharing)
+- [Презентация (PDF)](https://drive.google.com/file/d/1vKIUI6EJt9TD3Iw518NB95IuPNgXnzS5/view?usp=sharing)
 
 ## 📌 В планах
 
